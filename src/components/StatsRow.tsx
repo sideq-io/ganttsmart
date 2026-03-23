@@ -70,7 +70,9 @@ export default function StatsRow({ tasks }: Props) {
   });
 
   const dues = tasks.map((t) => new Date(t.due + 'T00:00:00').getTime());
-  const spanDays = Math.round((Math.max(...dues) - Math.min(...dues)) / 86400000);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const spanDays = Math.max(0, Math.round((Math.max(...dues) - today.getTime()) / 86400000));
 
   const cards: { label: string; value: number | string; color: string }[] = [];
   if (counts[1]) cards.push({ label: 'Urgent', value: counts[1], color: priorityColors.Urgent });
