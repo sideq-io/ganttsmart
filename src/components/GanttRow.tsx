@@ -192,22 +192,23 @@ export default function GanttRow({
         setDragDelta(ev.clientX - dragRef.current.startX);
       };
 
-      const onUp = async (ev: MouseEvent) => {
+      const onUp = (ev: MouseEvent) => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        setIsDragging(false);
 
-        if (dragRef.current && onReschedule) {
-          const delta = ev.clientX - dragRef.current.startX;
-          const days = Math.round(delta / dayWidth);
-          if (days !== 0) {
-            const nd = new Date(dueDate);
-            nd.setDate(nd.getDate() + days);
-            await onReschedule(task.uuid, formatDateStr(nd));
-          }
-        }
+        const delta = dragRef.current ? ev.clientX - dragRef.current.startX : 0;
+        const days = Math.round(delta / dayWidth);
+
+        // Reset all drag state BEFORE the mutation to avoid double-applying the delta
+        setIsDragging(false);
         dragRef.current = null;
         setDragDelta(0);
+
+        if (onReschedule && days !== 0) {
+          const nd = new Date(dueDate);
+          nd.setDate(nd.getDate() + days);
+          onReschedule(task.uuid, formatDateStr(nd));
+        }
       };
 
       document.addEventListener('mousemove', onMove);
@@ -229,30 +230,30 @@ export default function GanttRow({
         setStartDragDelta(ev.clientX - startDragRef.current.startX);
       };
 
-      const onUp = async (ev: MouseEvent) => {
+      const onUp = (ev: MouseEvent) => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        setIsDraggingStart(false);
 
-        if (startDragRef.current && onRescheduleStart) {
-          const delta = ev.clientX - startDragRef.current.startX;
-          const days = Math.round(delta / dayWidth);
-          if (days !== 0) {
-            // Use existing start date or derive from bar's visual left edge
-            const base =
-              taskStartDate ||
-              (() => {
-                const d = new Date(chartStart);
-                d.setDate(d.getDate() + Math.round(barLeft / dayWidth));
-                return d;
-              })();
-            const nd = new Date(base);
-            nd.setDate(nd.getDate() + days);
-            await onRescheduleStart(task.uuid, formatDateStr(nd));
-          }
-        }
+        const delta = startDragRef.current ? ev.clientX - startDragRef.current.startX : 0;
+        const days = Math.round(delta / dayWidth);
+
+        // Reset all drag state BEFORE the mutation
+        setIsDraggingStart(false);
         startDragRef.current = null;
         setStartDragDelta(0);
+
+        if (onRescheduleStart && days !== 0) {
+          const base =
+            taskStartDate ||
+            (() => {
+              const d = new Date(chartStart);
+              d.setDate(d.getDate() + Math.round(barLeft / dayWidth));
+              return d;
+            })();
+          const nd = new Date(base);
+          nd.setDate(nd.getDate() + days);
+          onRescheduleStart(task.uuid, formatDateStr(nd));
+        }
       };
 
       document.addEventListener('mousemove', onMove);
@@ -277,38 +278,37 @@ export default function GanttRow({
         setMoveDelta(delta);
       };
 
-      const onUp = async (ev: MouseEvent) => {
+      const onUp = (ev: MouseEvent) => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        setIsMoving(false);
 
-        if (moveRef.current) {
-          const delta = ev.clientX - moveRef.current.startX;
-          const days = Math.round(delta / dayWidth);
-          if (days !== 0) {
-            // Update due date
-            if (onReschedule) {
-              const nd = new Date(dueDate);
-              nd.setDate(nd.getDate() + days);
-              await onReschedule(task.uuid, formatDateStr(nd));
-            }
-            // Update start date
-            if (onRescheduleStart) {
-              const base =
-                taskStartDate ||
-                (() => {
-                  const d = new Date(chartStart);
-                  d.setDate(d.getDate() + Math.round(barLeft / dayWidth));
-                  return d;
-                })();
-              const ns = new Date(base);
-              ns.setDate(ns.getDate() + days);
-              await onRescheduleStart(task.uuid, formatDateStr(ns));
-            }
-          }
-        }
+        const delta = moveRef.current ? ev.clientX - moveRef.current.startX : 0;
+        const days = Math.round(delta / dayWidth);
+
+        // Reset all drag state BEFORE mutations
+        setIsMoving(false);
         moveRef.current = null;
         setMoveDelta(0);
+
+        if (days !== 0) {
+          if (onReschedule) {
+            const nd = new Date(dueDate);
+            nd.setDate(nd.getDate() + days);
+            onReschedule(task.uuid, formatDateStr(nd));
+          }
+          if (onRescheduleStart) {
+            const base =
+              taskStartDate ||
+              (() => {
+                const d = new Date(chartStart);
+                d.setDate(d.getDate() + Math.round(barLeft / dayWidth));
+                return d;
+              })();
+            const ns = new Date(base);
+            ns.setDate(ns.getDate() + days);
+            onRescheduleStart(task.uuid, formatDateStr(ns));
+          }
+        }
       };
 
       document.addEventListener('mousemove', onMove);
