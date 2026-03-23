@@ -104,6 +104,8 @@ function GanttView({ linearToken, onDisconnectLinear, onSignOut }: { linearToken
         dayWidth={dayWidth}
         theme={theme}
         onThemeChange={setTheme}
+        projectId={selectedProjectId}
+        projectName={projectName}
       />
 
       <FilterBar

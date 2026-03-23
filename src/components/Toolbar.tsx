@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Theme } from '../hooks/useTheme';
 import { toastError, toastSuccess } from './Toast';
 import { exportAsPng, exportAsPdf } from '../utils/export';
+import ShareDialog from './ShareDialog';
 import ThemeToggle from './ThemeToggle';
 
 interface Props {
@@ -15,14 +16,17 @@ interface Props {
   dayWidth: number;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  projectId: string;
+  projectName: string;
 }
 
 const btnClass =
   'flex items-center gap-1.5 px-3.5 py-[7px] bg-bg-hover border border-border-secondary rounded-md text-text-secondary text-xs font-medium cursor-pointer transition-all hover:bg-border-secondary hover:text-text-primary active:scale-[0.98]';
 
-export default function Toolbar({ loading, lastSynced, onRefresh, onDisconnectLinear, onSignOut, onZoomIn, onZoomOut, dayWidth, theme, onThemeChange }: Props) {
+export default function Toolbar({ loading, lastSynced, onRefresh, onDisconnectLinear, onSignOut, onZoomIn, onZoomOut, dayWidth, theme, onThemeChange, projectId, projectName }: Props) {
   const [exporting, setExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const handleExport = async (format: 'png' | 'pdf') => {
     setShowExportMenu(false);
@@ -112,6 +116,26 @@ export default function Toolbar({ loading, lastSynced, onRefresh, onDisconnectLi
           </div>
         )}
       </div>
+
+      {/* Share */}
+      <button
+        onClick={() => setShowShareDialog(true)}
+        className={btnClass}
+        title="Share roadmap"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+        </svg>
+        Share
+      </button>
+
+      {showShareDialog && (
+        <ShareDialog
+          projectId={projectId}
+          projectName={projectName}
+          onClose={() => setShowShareDialog(false)}
+        />
+      )}
 
       {/* Theme toggle */}
       <ThemeToggle theme={theme} onThemeChange={onThemeChange} />

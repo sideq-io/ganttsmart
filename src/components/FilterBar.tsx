@@ -16,6 +16,7 @@ interface Props {
   filteredCount: number;
   groupBy: GroupBy;
   onGroupByChange: (g: GroupBy) => void;
+  hideProjectSelector?: boolean;
 }
 
 const PRIORITY_CHIPS = [
@@ -82,6 +83,7 @@ export default function FilterBar({
   filteredCount,
   groupBy,
   onGroupByChange,
+  hideProjectSelector,
 }: Props) {
   const togglePriority = (val: number) => {
     const next = new Set(filters.priorities);
@@ -116,17 +118,20 @@ export default function FilterBar({
   return (
     <div className="flex items-center gap-2.5 mb-6 flex-wrap print:hidden">
       {/* Project */}
-      <span className={labelClass}>Project</span>
-      <CustomDropdown
-        value={selectedProjectId}
-        options={projectOptions}
-        placeholder="All Projects"
-        placeholderIcon={<FolderIcon />}
-        onChange={(v) => onSelectProject(v)}
-        required
-      />
-
-      <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden sm:block" />
+      {!hideProjectSelector && (
+        <>
+          <span className={labelClass}>Project</span>
+          <CustomDropdown
+            value={selectedProjectId}
+            options={projectOptions}
+            placeholder="All Projects"
+            placeholderIcon={<FolderIcon />}
+            onChange={(v) => onSelectProject(v)}
+            required
+          />
+          <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden sm:block" />
+        </>
+      )}
 
       {/* Assignee */}
       <span className={`${labelClass} hidden sm:inline`}>Assignee</span>
