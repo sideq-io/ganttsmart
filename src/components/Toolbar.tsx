@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { Theme } from '../hooks/useTheme';
+import type { Theme } from '@/hooks/useTheme';
 import { toastError, toastSuccess } from './Toast';
-import { exportAsPng, exportAsPdf } from '../utils/export';
+import { exportAsPng, exportAsPdf } from '@/utils/export';
 import ShareDialog from './ShareDialog';
 import ThemeToggle from './ThemeToggle';
 

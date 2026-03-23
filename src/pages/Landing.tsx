@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '@/hooks/useTheme';
 
 // Realistic mock data for the Gantt preview
 const MOCK_TASKS = [

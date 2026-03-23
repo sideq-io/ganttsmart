@@ -1,12 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import './index.css';
-import App from './App';
-import Callback from './pages/Callback';
-import Landing from './pages/Landing';
-import NotFound from './pages/NotFound';
-import SharedView from './pages/SharedView';
+import '@/index.css';
+import App from '@/App';
+import Callback from '@/pages/Callback';
+import Landing from '@/pages/Landing';
+import NotFound from '@/pages/NotFound';
+import SharedView from '@/pages/SharedView';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

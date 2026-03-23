@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import type { Filters, GroupBy, Project } from '../types';
-import { Avatar } from '../utils/avatar';
+import type { Filters, GroupBy, Project } from '@/types';
+import { Avatar } from '@/utils/avatar';
 import CustomDropdown from './CustomDropdown';
 import type { DropdownOption } from './CustomDropdown';
 

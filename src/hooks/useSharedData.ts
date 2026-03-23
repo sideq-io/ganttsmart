@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH } from '../types';
-import type { Filters, GroupBy, Milestone, Task } from '../types';
+import { supabase } from '@/lib/supabase';
+import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH } from '@/types';
+import type { Filters, GroupBy, Milestone, Task } from '@/types';
 
 const DEFAULT_PRIORITIES = new Set([0, 1, 2, 3, 4]);
 

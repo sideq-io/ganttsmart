@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { toastError } from '../components/Toast';
+import { supabase } from '@/lib/supabase';
+import { toastError } from '@/components/Toast';
 
 // Refresh session 5 minutes before it expires
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;

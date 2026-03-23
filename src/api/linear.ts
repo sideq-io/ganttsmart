@@ -1,4 +1,4 @@
-import { PRIORITY_MAP, type Milestone, type Project, type Task, type WorkflowState } from '../types';
+import { PRIORITY_MAP, type Milestone, type Project, type Task, type WorkflowState } from '@/types';
 
 const LINEAR_API = 'https://api.linear.app/graphql';
 

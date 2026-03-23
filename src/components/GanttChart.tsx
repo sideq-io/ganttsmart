@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import type { GroupBy, Milestone, Task } from '../types';
-import { Avatar } from '../utils/avatar';
+import type { GroupBy, Milestone, Task } from '@/types';
+import { Avatar } from '@/utils/avatar';
 import DependencyArrows from './DependencyArrows';
 import GanttRow from './GanttRow';
 

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import FilterBar from '../components/FilterBar';
-import GanttChart from '../components/GanttChart';
-import Legend from '../components/Legend';
-import StatsRow from '../components/StatsRow';
-import Tooltip from '../components/Tooltip';
-import { useSharedData } from '../hooks/useSharedData';
-import { useTheme } from '../hooks/useTheme';
+import FilterBar from '@/components/FilterBar';
+import GanttChart from '@/components/GanttChart';
+import Legend from '@/components/Legend';
+import StatsRow from '@/components/StatsRow';
+import Tooltip from '@/components/Tooltip';
+import { useSharedData } from '@/hooks/useSharedData';
+import { useTheme } from '@/hooks/useTheme';
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');

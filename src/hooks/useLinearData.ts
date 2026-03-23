@@ -6,10 +6,10 @@ import {
   updateIssueDueDate,
   updateIssueStartDate,
   updateIssueState,
-} from '../api/linear';
-import { toast, toastError, toastSuccess } from '../components/Toast';
-import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH } from '../types';
-import type { Filters, GroupBy, Milestone, Project, Task, WorkflowState } from '../types';
+} from '@/api/linear';
+import { toast, toastError, toastSuccess } from '@/components/Toast';
+import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH } from '@/types';
+import type { Filters, GroupBy, Milestone, Project, Task, WorkflowState } from '@/types';
 
 const DEFAULT_PRIORITIES = new Set([0, 1, 2, 3, 4]);
 const POLL_INTERVAL_MS = 30_000; // 30 seconds

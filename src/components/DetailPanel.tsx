@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Task } from '../types';
-import { Avatar } from '../utils/avatar';
+import type { Task } from '@/types';
+import { Avatar } from '@/utils/avatar';
 
 function stripMarkdown(md: string): string {
   return md

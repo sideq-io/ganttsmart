@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import type { Task } from '../types';
+import type { Task } from '@/types';
 import type { ColumnWidths } from './GanttChart';
-import { Avatar } from '../utils/avatar';
+import { Avatar } from '@/utils/avatar';
 import { openDetailPanel } from './DetailPanel';
 
 interface Props {

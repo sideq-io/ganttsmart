@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import AuthPage from './components/AuthPage';
-import FilterBar from './components/FilterBar';
-import GanttChart from './components/GanttChart';
-import Header from './components/Header';
-import Legend from './components/Legend';
-import LinearConnect from './components/LinearConnect';
-import Onboarding from './components/Onboarding';
-import StatsRow from './components/StatsRow';
-import ToastContainer from './components/Toast';
-import Toolbar from './components/Toolbar';
-import DetailPanel from './components/DetailPanel';
-import { useAuth } from './hooks/useAuth';
-import { useLinearData } from './hooks/useLinearData';
-import { useTheme } from './hooks/useTheme';
+import AuthPage from '@/components/AuthPage';
+import FilterBar from '@/components/FilterBar';
+import GanttChart from '@/components/GanttChart';
+import Header from '@/components/Header';
+import Legend from '@/components/Legend';
+import LinearConnect from '@/components/LinearConnect';
+import Onboarding from '@/components/Onboarding';
+import StatsRow from '@/components/StatsRow';
+import ToastContainer from '@/components/Toast';
+import Toolbar from '@/components/Toolbar';
+import DetailPanel from '@/components/DetailPanel';
+import { useAuth } from '@/hooks/useAuth';
+import { useLinearData } from '@/hooks/useLinearData';
+import { useTheme } from '@/hooks/useTheme';
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');

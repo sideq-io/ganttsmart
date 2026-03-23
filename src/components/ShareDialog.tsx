@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { toast, toastError, toastSuccess } from './Toast';
 
 async function invokeShareFn(action: string, body: Record<string, unknown>) {

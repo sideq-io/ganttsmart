@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Theme } from '../hooks/useTheme';
+import type { Theme } from '@/hooks/useTheme';
 
 interface Props {
   theme: Theme;
