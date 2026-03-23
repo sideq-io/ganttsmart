@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import '@/index.css';
 import App from '@/App';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const Landing = lazy(() => import('@/pages/Landing'));
 const Callback = lazy(() => import('@/pages/Callback'));
@@ -18,15 +19,17 @@ const Spinner = () => (
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Suspense fallback={<Spinner />}>
-        <Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<Spinner />}>
+          <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/app" element={<App />} />
           <Route path="/callback" element={<Callback />} />
           <Route path="/share/:shareToken" element={<SharedView />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
 );
