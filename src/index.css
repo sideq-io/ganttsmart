@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* ---- Dark theme (default) ---- */
+@theme {
+  --color-bg-primary: #0f1117;
+  --color-bg-card: #161b22;
+  --color-bg-header: #1c2129;
+  --color-bg-hover: #21262d;
+  --color-border-primary: #21262d;
+  --color-border-secondary: #30363d;
+  --color-text-primary: #e1e4e8;
+  --color-text-secondary: #8b949e;
+  --color-text-muted: #484f58;
+  --color-accent: #58a6ff;
+  --color-urgent: #f85149;
+  --color-urgent-dark: #da3633;
+  --color-high: #ffa657;
+  --color-high-dark: #d47519;
+  --color-medium: #d2992a;
+  --color-medium-dark: #9e6a03;
+  --color-low: #8b949e;
+  --color-low-dark: #484f58;
+  --color-none: #484f58;
+  --color-none-dark: #30363d;
+  --color-success: #238636;
+  --color-success-hover: #2ea043;
+}
+
+/* ---- Light theme overrides ---- */
+html.light {
+  --color-bg-primary: #f6f8fa;
+  --color-bg-card: #ffffff;
+  --color-bg-header: #f0f3f6;
+  --color-bg-hover: #e8ecf0;
+  --color-border-primary: #d0d7de;
+  --color-border-secondary: #c0c8d0;
+  --color-text-primary: #1f2328;
+  --color-text-secondary: #59636e;
+  --color-text-muted: #8c959f;
+  --color-accent: #0969da;
+  --color-urgent: #cf222e;
+  --color-urgent-dark: #a40e26;
+  --color-high: #bf5614;
+  --color-high-dark: #953800;
+  --color-medium: #9a6700;
+  --color-medium-dark: #7d5200;
+  --color-low: #59636e;
+  --color-low-dark: #424a53;
+  --color-none: #8c959f;
+  --color-none-dark: #6e7781;
+  --color-success: #1a7f37;
+  --color-success-hover: #218b3e;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Focus accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Default transitions on interactive elements */
+button, select, input, a {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+/* Tabular nums for date alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-bar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+.animate-pulse-bar {
+  animation: pulse-bar 2s ease-in-out infinite;
+}
+
+/* Scrollbar - dark */
+html.dark ::-webkit-scrollbar { height: 8px; width: 8px; }
+html.dark ::-webkit-scrollbar-track { background: var(--color-bg-card); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* Scrollbar - light */
+html.light ::-webkit-scrollbar { height: 8px; width: 8px; }
+html.light ::-webkit-scrollbar-track { background: #f0f3f6; }
+html.light ::-webkit-scrollbar-thumb { background: #c0c8d0; border-radius: 4px; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #8c959f; }
+
+/* Light theme gradient overrides for Gantt bars */
+html.light .bar-urgent { background: linear-gradient(135deg, #a40e26, #cf222e) !important; }
+html.light .bar-high { background: linear-gradient(135deg, #953800, #bf5614) !important; }
+html.light .bar-medium { background: linear-gradient(135deg, #7d5200, #9a6700) !important; }
+html.light .bar-low { background: linear-gradient(135deg, #424a53, #59636e) !important; }
+html.light .bar-none { background: linear-gradient(135deg, #6e7781, #8c959f) !important; }
+html.light .bar-overdue { background: linear-gradient(135deg, #a40e26, #cf222e) !important; }
+
+/* Light theme - semi-transparent adjustments */
+html.light .gantt-bar { color: rgba(255,255,255,0.9); }
+
+/* Focus-visible for keyboard accessibility */
+tr:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .auth-overlay,
+  .tooltip { display: none !important; }
+
+  #gantt-export-target {
+    overflow: visible !important;
+    border: 1px solid #ccc !important;
+  }
+
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+}
