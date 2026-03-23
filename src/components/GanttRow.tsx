@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { Task } from '../types';
 import type { ColumnWidths } from './GanttChart';
 import { Avatar } from '../utils/avatar';
-import { hideTooltip, showTooltip } from './Tooltip';
+import { openDetailPanel } from './DetailPanel';
 
 interface Props {
   task: Task;
@@ -485,10 +485,8 @@ export default function GanttRow({ task, chartStart, totalDays, today, dayWidth,
               boxShadow: overdue && !hasStartDate ? '0 2px 12px rgba(248,81,73,0.5)' : barShadows[pCls],
               overflow: 'hidden',
             }}
-            onClick={() => { if (!didDragRef.current) window.open(task.url, '_blank'); }}
+            onClick={() => { if (!didDragRef.current) openDetailPanel(task); }}
             onMouseDown={(onReschedule || onRescheduleStart) ? handleMoveStart : undefined}
-            onMouseEnter={(e) => !isAnyDrag && showTooltip(task, e.clientX, e.clientY)}
-            onMouseLeave={() => !isAnyDrag && hideTooltip()}
           >
             {/* Left drag handle (start date — works for setting new or editing existing) */}
             {onRescheduleStart && (

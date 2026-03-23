@@ -9,7 +9,7 @@ import Onboarding from './components/Onboarding';
 import StatsRow from './components/StatsRow';
 import ToastContainer from './components/Toast';
 import Toolbar from './components/Toolbar';
-import Tooltip from './components/Tooltip';
+import DetailPanel from './components/DetailPanel';
 import { useAuth } from './hooks/useAuth';
 import { useLinearData } from './hooks/useLinearData';
 import { useTheme } from './hooks/useTheme';
@@ -135,7 +135,7 @@ function GanttView({ linearToken, onDisconnectLinear, onSignOut }: { linearToken
         onRescheduleStart={rescheduleStart}
         onCycleStatus={cycleStatus}
       />
-      <Tooltip />
+      <DetailPanel />
       <ToastContainer />
     </div>
   );
