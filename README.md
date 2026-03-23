@@ -162,14 +162,14 @@ Contributions welcome. Please open an issue first to discuss what you'd like to 
 
 See [LICENSE](LICENSE) for full terms. For commercial licensing, contact the maintainer.
 
-Copyright (C) 2025-2026 Michel Bitar. All rights reserved.
+Copyright (C) 2025-2026 sideq.io. All rights reserved.
 
 ---
 
 ## Authors
 
-**Michel Bitar** — [GitHub](https://github.com/MichelBitar99)
-**Anthony Badran** — [GitHub](https://github.com/anthonybadran)
+- **Michel Bitar** — [GitHub](https://github.com/MichelBitar99)
+- **Anthony Badran** — [GitHub](https://github.com/anthonybadran)
 
 
 ## Contributors
