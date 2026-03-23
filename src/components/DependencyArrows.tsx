@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Task } from '@/types';
 import { daysBetween } from '@/utils/date';
 
@@ -13,7 +14,7 @@ interface Props {
 const ROW_HEIGHT = 58; // approximate row height in pixels
 const HEADER_HEIGHT = 76; // approximate header height
 
-export default function DependencyArrows({ tasks, chartStart, today, dayWidth, totalDays, fixedColsWidth }: Props) {
+export default memo(function DependencyArrows({ tasks, chartStart, today, dayWidth, totalDays, fixedColsWidth }: Props) {
   // Build task index map for fast lookup
   const taskIndex = new Map<string, number>();
   tasks.forEach((t, i) => taskIndex.set(t.id, i));
@@ -94,4 +95,4 @@ export default function DependencyArrows({ tasks, chartStart, today, dayWidth, t
       })}
     </svg>
   );
-}
+});

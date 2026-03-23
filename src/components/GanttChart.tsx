@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { GroupBy, Milestone, Task } from '@/types';
 import { Avatar } from '@/utils/avatar';
 import { daysBetween, isWeekend } from '@/utils/date';
@@ -237,42 +237,50 @@ export default function GanttChart({
   const minDaysToFill = Math.ceil(Math.max(viewportWidth - fixedCols, 0) / dayWidth);
   const totalDays = Math.max(dataDays, minDaysToFill);
 
-  // Calendar header
-  const months: { label: string; days: number }[] = [];
-  const daysCells: { date: Date; isWeekend: boolean; isToday: boolean }[] = [];
+  // Calendar header (memoized)
+  const { months, daysCells } = useMemo(() => {
+    const months: { label: string; days: number }[] = [];
+    const daysCells: { date: Date; isWeekend: boolean; isToday: boolean }[] = [];
 
-  let currentMonth = '';
-  let currentMonthCount = 0;
+    let currentMonth = '';
+    let currentMonthCount = 0;
 
-  for (let i = 0; i < totalDays; i++) {
-    const d = new Date(chartStart);
-    d.setDate(d.getDate() + i);
-    const mk = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(chartStart);
+      d.setDate(d.getDate() + i);
+      const mk = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    if (mk !== currentMonth) {
-      if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
-      currentMonth = mk;
-      currentMonthCount = 0;
+      if (mk !== currentMonth) {
+        if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
+        currentMonth = mk;
+        currentMonthCount = 0;
+      }
+      currentMonthCount++;
+
+      daysCells.push({
+        date: d,
+        isWeekend: isWeekend(d),
+        isToday: d.getTime() === today.getTime(),
+      });
     }
-    currentMonthCount++;
+    if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
 
-    daysCells.push({
-      date: d,
-      isWeekend: isWeekend(d),
-      isToday: d.getTime() === today.getTime(),
-    });
-  }
-  if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
+    return { months, daysCells };
+  }, [chartStart, totalDays, today]);
 
-  // Milestone positions
-  const milestonesInRange = milestones
-    .filter((m) => m.targetDate)
-    .map((m) => {
-      const mDate = new Date(m.targetDate! + 'T00:00:00');
-      const dayOffset = daysBetween(chartStart, mDate);
-      return { ...m, dayOffset };
-    })
-    .filter((m) => m.dayOffset >= 0 && m.dayOffset <= totalDays);
+  // Milestone positions (memoized)
+  const milestonesInRange = useMemo(
+    () =>
+      milestones
+        .filter((m) => m.targetDate)
+        .map((m) => {
+          const mDate = new Date(m.targetDate! + 'T00:00:00');
+          const dayOffset = daysBetween(chartStart, mDate);
+          return { ...m, dayOffset };
+        })
+        .filter((m) => m.dayOffset >= 0 && m.dayOffset <= totalDays),
+    [milestones, chartStart, totalDays],
+  );
 
   const fixedColsWidth = colWidths.task + colWidths.priority + colWidths.due;
   const groups = groupTasks(tasks, groupBy);

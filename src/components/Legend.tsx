@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 const items = [
   { label: 'Urgent', bg: 'linear-gradient(135deg, #da3633, #f85149)' },
   { label: 'High', bg: 'linear-gradient(135deg, #d47519, #ffa657)' },
@@ -6,7 +8,7 @@ const items = [
   { label: 'Done', bg: 'linear-gradient(135deg, #1a7f37, #2ea043)' },
 ];
 
-export default function Legend() {
+export default memo(function Legend() {
   return (
     <div className="inline-flex items-center gap-5 mb-8 bg-bg-card/50 border border-border-primary rounded-lg px-4 py-2.5 flex-wrap print:hidden">
       {items.map((it) => (
@@ -27,4 +29,4 @@ export default function Legend() {
       </div>
     </div>
   );
-}
+});
