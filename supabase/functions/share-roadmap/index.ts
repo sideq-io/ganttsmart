@@ -5,6 +5,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const LINEAR_API = "https://api.linear.app/graphql";
 const MAX_EXPIRY_DAYS = 90;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_PASSWORD_ATTEMPTS = 5;
 const PRIORITY_MAP: Record<number, string> = { 0: "None", 1: "Urgent", 2: "High", 3: "Medium", 4: "Low" };
 
 const corsHeaders = {
@@ -19,19 +21,115 @@ function json(data: unknown, status = 200) {
   });
 }
 
-async function hashPassword(pw: string): Promise<string> {
-  const data = new TextEncoder().encode(pw + "ganttsmart-salt-2024");
-  const buf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+// --- PBKDF2 password hashing (AUTH-VULN-02 fix) ---
+
+function toHex(buf: Uint8Array): string {
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function fromHex(hex: string): Uint8Array {
+  return new Uint8Array(hex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+}
+
+async function hashPasswordPBKDF2(pw: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial, 256,
+  );
+  return `pbkdf2:${toHex(salt)}:${toHex(new Uint8Array(bits))}`;
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+async function verifyPassword(pw: string, stored: string): Promise<boolean> {
+  if (stored.startsWith("pbkdf2:")) {
+    const [, saltHex, expectedHash] = stored.split(":");
+    const salt = fromHex(saltHex);
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"],
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+      keyMaterial, 256,
+    );
+    return constantTimeEqual(toHex(new Uint8Array(bits)), expectedHash);
+  } else {
+    // Legacy SHA-256 format — verify then caller re-hashes
+    const data = new TextEncoder().encode(pw + "ganttsmart-salt-2024");
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return constantTimeEqual(toHex(new Uint8Array(buf)), stored);
+  }
+}
+
+// --- Rate limiting (AUTH-VULN-03 fix) ---
+
+async function checkRateLimit(supabase: ReturnType<typeof createClient>, shareToken: string): Promise<{ blocked: boolean; retryAfterSeconds?: number }> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { data } = await supabase
+    .from("share_access_attempts")
+    .select("*")
+    .eq("share_token", shareToken)
+    .gte("first_attempt_at", windowStart)
+    .order("first_attempt_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (data && data.attempt_count >= MAX_PASSWORD_ATTEMPTS) {
+    const lockedUntil = new Date(new Date(data.first_attempt_at).getTime() + RATE_LIMIT_WINDOW_MS);
+    const retryAfterSeconds = Math.ceil((lockedUntil.getTime() - Date.now()) / 1000);
+    if (retryAfterSeconds > 0) return { blocked: true, retryAfterSeconds };
+  }
+  return { blocked: false };
+}
+
+async function recordFailedAttempt(supabase: ReturnType<typeof createClient>, shareToken: string): Promise<void> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { data } = await supabase
+    .from("share_access_attempts")
+    .select("id, attempt_count")
+    .eq("share_token", shareToken)
+    .gte("first_attempt_at", windowStart)
+    .order("first_attempt_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (data) {
+    await supabase.from("share_access_attempts")
+      .update({ attempt_count: data.attempt_count + 1, last_attempt_at: new Date().toISOString() })
+      .eq("id", data.id);
+  } else {
+    await supabase.from("share_access_attempts")
+      .insert({ share_token: shareToken });
+  }
+}
+
+// --- GraphQL with variables (INJ-VULN-01 fix) ---
+
 async function fetchLinearData(apiKey: string, projectId: string) {
-  const query = `query { project(id: "${projectId}") { name issues(first: 250, filter: { completedAt: { null: true } }) { nodes { id identifier title description dueDate priority state { name type } assignee { name } } } } }`;
+  const query = `query($id: String!) {
+    project(id: $id) {
+      name
+      issues(first: 250, filter: { completedAt: { null: true } }) {
+        nodes { id identifier title description dueDate priority state { name type } assignee { name } }
+      }
+    }
+  }`;
 
   const res = await fetch(LINEAR_API, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: apiKey },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables: { id: projectId } }),
   });
 
   if (!res.ok) throw new Error(`Linear API returned ${res.status}`);
@@ -86,7 +184,7 @@ Deno.serve(async (req: Request) => {
       const projectId = body.projectId;
       if (!projectId) return json({ error: "projectId required" }, 400);
 
-      const days = Math.min(Math.max(1, body.expiresInDays || 30), MAX_EXPIRY_DAYS);
+      const days = Math.min(Math.max(1, body.expiresInDays || 3), MAX_EXPIRY_DAYS);
       const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
 
       const { data: settings } = await supabase.from("user_settings").select("linear_access_token").eq("id", user.id).single();
@@ -100,7 +198,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const shareToken = crypto.randomUUID();
-      const passwordHash = body.password ? await hashPassword(body.password) : null;
+      const passwordHash = body.password ? await hashPasswordPBKDF2(body.password) : null;
 
       const { data: share, error: err } = await supabase.from("shared_roadmaps").insert({
         owner_id: user.id, project_id: projectId, project_name: cachedData.projectName,
@@ -122,9 +220,25 @@ Deno.serve(async (req: Request) => {
       if (new Date(share.expires_at) < new Date()) return json({ error: "This shared link has expired", expired: true }, 410);
 
       if (share.password_hash) {
+        // Rate limit check
+        const rateCheck = await checkRateLimit(supabase, shareToken);
+        if (rateCheck.blocked) {
+          return json({ error: "Too many attempts. Try again later.", retryAfterSeconds: rateCheck.retryAfterSeconds }, 429);
+        }
+
         if (!password) return json({ needsPassword: true, projectName: share.project_name });
-        const h = await hashPassword(password);
-        if (h !== share.password_hash) return json({ error: "Incorrect password", needsPassword: true }, 403);
+
+        const valid = await verifyPassword(password, share.password_hash);
+        if (!valid) {
+          await recordFailedAttempt(supabase, shareToken);
+          return json({ error: "Incorrect password", needsPassword: true }, 403);
+        }
+
+        // Migrate legacy SHA-256 hash to PBKDF2 on successful verification
+        if (!share.password_hash.startsWith("pbkdf2:")) {
+          const newHash = await hashPasswordPBKDF2(password);
+          await supabase.from("shared_roadmaps").update({ password_hash: newHash }).eq("id", share.id);
+        }
       }
 
       return json({ projectName: share.project_name, cachedData: share.cached_data, cachedAt: share.cached_at, expiresAt: share.expires_at });

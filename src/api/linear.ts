@@ -27,13 +27,13 @@ function releaseSlot() {
 }
 
 // ---- Core GraphQL with retry + rate limit awareness ----
-async function gql(apiKey: string, query: string, retries = 2): Promise<Record<string, unknown>> {
+async function gql(apiKey: string, query: string, variables?: Record<string, unknown>, retries = 2): Promise<Record<string, unknown>> {
   await waitForSlot();
   try {
     const res = await fetch(LINEAR_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: apiKey },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables }),
     });
 
     // Rate limited — retry after delay
@@ -42,7 +42,7 @@ async function gql(apiKey: string, query: string, retries = 2): Promise<Record<s
       if (retries > 0) {
         releaseSlot();
         await delay(retryAfter * 1000);
-        return gql(apiKey, query, retries - 1);
+        return gql(apiKey, query, variables, retries - 1);
       }
       throw new Error('Rate limited by Linear API. Please wait a moment and try again.');
     }
@@ -53,7 +53,7 @@ async function gql(apiKey: string, query: string, retries = 2): Promise<Record<s
       if (res.status >= 500 && retries > 0) {
         releaseSlot();
         await delay(1000);
-        return gql(apiKey, query, retries - 1);
+        return gql(apiKey, query, variables, retries - 1);
       }
       throw new Error(`Linear API error (${res.status}): ${text || res.statusText}`);
     }
@@ -65,7 +65,7 @@ async function gql(apiKey: string, query: string, retries = 2): Promise<Record<s
       if (retries > 0 && (msg.includes('timeout') || msg.includes('unavailable'))) {
         releaseSlot();
         await delay(1000);
-        return gql(apiKey, query, retries - 1);
+        return gql(apiKey, query, variables, retries - 1);
       }
       throw new Error(msg);
     }
@@ -75,7 +75,7 @@ async function gql(apiKey: string, query: string, retries = 2): Promise<Record<s
     if (retries > 0 && (e as Error).message?.includes('fetch')) {
       releaseSlot();
       await delay(1000);
-      return gql(apiKey, query, retries - 1);
+      return gql(apiKey, query, variables, retries - 1);
     }
     throw e;
   } finally {
@@ -161,8 +161,8 @@ export async function fetchIssues(
 ): Promise<{ projectName: string; tasks: Task[]; doneTasks: Task[]; milestones: Milestone[] }> {
   const data = await gql(
     apiKey,
-    `query {
-      project(id: "${projectId}") {
+    `query($id: String!) {
+      project(id: $id) {
         name
         projectMilestones {
           nodes {
@@ -205,6 +205,7 @@ export async function fetchIssues(
         }
       }
     }`,
+    { id: projectId },
   );
 
   interface IssueNode {
@@ -244,8 +245,8 @@ export async function fetchIssues(
     try {
       const detailData = await gql(
         apiKey,
-        `query {
-          issues(filter: { id: { in: [${issueIds.map((id) => `"${id}"`).join(',')}] } }) {
+        `query($ids: [ID!]!) {
+          issues(filter: { id: { in: $ids } }) {
             nodes {
               id
               identifier
@@ -264,6 +265,7 @@ export async function fetchIssues(
             }
           }
         }`,
+        { ids: issueIds },
       );
 
       interface RelNode {
@@ -363,11 +365,12 @@ export async function updateIssueDueDate(apiKey: string, issueId: string, dueDat
   await debouncedApiCall(`due-${issueId}`, () =>
     gql(
       apiKey,
-      `mutation {
-        issueUpdate(id: "${issueId}", input: { dueDate: "${dueDate}" }) {
+      `mutation($id: String!, $dueDate: TimelessDate!) {
+        issueUpdate(id: $id, input: { dueDate: $dueDate }) {
           success
         }
       }`,
+      { id: issueId, dueDate },
     ),
   );
 }
@@ -375,7 +378,7 @@ export async function updateIssueDueDate(apiKey: string, issueId: string, dueDat
 export async function updateIssueStartDate(apiKey: string, issueId: string, startDate: string): Promise<void> {
   await debouncedApiCall(`start-${issueId}`, async () => {
     // Fetch current description
-    const data = await gql(apiKey, `query { issue(id: "${issueId}") { description } }`);
+    const data = await gql(apiKey, `query($id: String!) { issue(id: $id) { description } }`, { id: issueId });
     const issue = data.issue as { description: string | null };
     const currentDesc: string = issue?.description || '';
 
@@ -393,15 +396,14 @@ export async function updateIssueStartDate(apiKey: string, issueId: string, star
       newDesc = currentDesc.trim() ? `${currentDesc.trim()}\n${newTag}` : newTag;
     }
 
-    const escaped = newDesc.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-
     await gql(
       apiKey,
-      `mutation {
-        issueUpdate(id: "${issueId}", input: { description: "${escaped}" }) {
+      `mutation($id: String!, $description: String!) {
+        issueUpdate(id: $id, input: { description: $description }) {
           success
         }
       }`,
+      { id: issueId, description: newDesc },
     );
   });
 }
@@ -409,19 +411,20 @@ export async function updateIssueStartDate(apiKey: string, issueId: string, star
 export async function updateIssueState(apiKey: string, issueId: string, stateId: string): Promise<void> {
   await gql(
     apiKey,
-    `mutation {
-      issueUpdate(id: "${issueId}", input: { stateId: "${stateId}" }) {
+    `mutation($id: String!, $stateId: String!) {
+      issueUpdate(id: $id, input: { stateId: $stateId }) {
         success
       }
     }`,
+    { id: issueId, stateId },
   );
 }
 
 export async function fetchWorkflowStates(apiKey: string, teamId: string): Promise<WorkflowState[]> {
   const data = await gql(
     apiKey,
-    `query {
-      workflowStates(filter: { team: { id: { eq: "${teamId}" } } }) {
+    `query($teamId: String!) {
+      workflowStates(filter: { team: { id: { eq: $teamId } } }) {
         nodes {
           id
           name
@@ -430,6 +433,7 @@ export async function fetchWorkflowStates(apiKey: string, teamId: string): Promi
         }
       }
     }`,
+    { teamId },
   );
   const states = data.workflowStates as { nodes: WorkflowState[] };
   return states.nodes.sort((a, b) => a.position - b.position);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Task } from '@/types';
 import { Avatar } from '@/utils/avatar';
+import { isSafeUrl } from '@/utils/url';
 import { priorityColors, statusDotColors } from '@/utils/colors';
 import { formatDateShort } from '@/utils/date';
 import { stripMarkdown } from '@/utils/markdown';
@@ -110,7 +111,7 @@ export default function DetailPanel() {
           </div>
           <div className="flex items-center gap-1">
             <a
-              href={task.url}
+              href={isSafeUrl(task.url) ? task.url : '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="p-1.5 rounded-md hover:bg-bg-hover text-text-muted hover:text-accent transition-colors"

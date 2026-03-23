@@ -48,7 +48,7 @@ export default function Callback() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, state: searchParams.get('state') }),
       });
 
       if (!res.ok) {

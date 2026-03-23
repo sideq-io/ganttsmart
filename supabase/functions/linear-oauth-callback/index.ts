@@ -37,9 +37,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { code } = await req.json();
+    const { code, state } = await req.json();
     if (!code) {
       return new Response(JSON.stringify({ error: "Missing authorization code" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // AUTHZ-VULN-03: Validate state parameter (CSRF protection)
+    if (!state || typeof state !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(state)) {
+      return new Response(JSON.stringify({ error: "Invalid or missing state parameter" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

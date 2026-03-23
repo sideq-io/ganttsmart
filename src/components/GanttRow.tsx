@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { Task } from '@/types';
 import type { ColumnWidths } from './GanttChart';
 import { Avatar } from '@/utils/avatar';
+import { isSafeUrl } from '@/utils/url';
 import {
   barGradients,
   barShadows,
@@ -345,7 +346,7 @@ export default function GanttRow({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          window.open(task.url, '_blank');
+          if (isSafeUrl(task.url)) window.open(task.url, '_blank', 'noopener,noreferrer');
         }
         if (e.key === 's' && onCycleStatus) {
           e.preventDefault();
@@ -374,7 +375,7 @@ export default function GanttRow({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <a
-                href={task.url}
+                href={isSafeUrl(task.url) ? task.url : '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[11px] font-semibold tracking-wide hover:underline"
