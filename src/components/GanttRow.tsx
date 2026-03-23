@@ -14,6 +14,7 @@ interface Props {
   onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
   onCycleStatus?: (taskUuid: string) => Promise<void>;
+  isDone?: boolean;
 }
 
 function priorityClass(val: number): string {
@@ -111,7 +112,7 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
-export default function GanttRow({ task, chartStart, totalDays, today, dayWidth, colWidths, onReschedule, onRescheduleStart, onCycleStatus }: Props) {
+export default function GanttRow({ task, chartStart, totalDays, today, dayWidth, colWidths, onReschedule, onRescheduleStart, onCycleStatus, isDone }: Props) {
   const pCls = priorityClass(task.priorityVal);
   const dueDate = new Date(task.due + 'T00:00:00');
   const daysLeft = daysBetween(today, dueDate);
@@ -399,7 +400,8 @@ export default function GanttRow({ task, chartStart, totalDays, today, dayWidth,
                 </svg>
               )}
             </div>
-            <div className="text-[13px] font-medium text-text-primary leading-snug truncate" style={{ maxWidth: colWidths.task - 60 }}>
+            <div className={`text-[13px] font-medium text-text-primary leading-snug truncate ${isDone ? 'line-through opacity-70' : ''}`} style={{ maxWidth: colWidths.task - 60 }}>
+              {isDone && <span className="text-success mr-1">✓</span>}
               {task.title}
             </div>
             <div className="flex items-center gap-2 mt-1">
@@ -477,12 +479,12 @@ export default function GanttRow({ task, chartStart, totalDays, today, dayWidth,
 
           {/* Main bar */}
           <div
-            className={`gantt-bar absolute h-[26px] rounded-md top-[3px] flex items-center justify-end pr-2 text-[10px] font-semibold text-white/70 z-[2] min-w-[20px] transition-[filter,transform] duration-150 hover:brightness-120 hover:scale-y-110 ${overdue && !hasStartDate ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none !transform-none opacity-80' : ''} ${(onReschedule || onRescheduleStart) ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
+            className={`gantt-bar absolute h-[26px] rounded-md top-[3px] flex items-center justify-end pr-2 text-[10px] font-semibold text-white/70 z-[2] min-w-[20px] transition-[filter,transform] duration-150 hover:brightness-120 hover:scale-y-110 ${isDone ? 'bar-done' : overdue && !hasStartDate ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none !transform-none opacity-80' : ''} ${(onReschedule || onRescheduleStart) ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
             style={{
               left: displayBarLeft,
               width: displayBarWidth,
-              background: overdue && !hasStartDate ? 'linear-gradient(135deg, #da3633, #f85149)' : barGradients[pCls],
-              boxShadow: overdue && !hasStartDate ? '0 2px 12px rgba(248,81,73,0.5)' : barShadows[pCls],
+              background: isDone ? 'linear-gradient(135deg, #1a7f37, #2ea043)' : overdue && !hasStartDate ? 'linear-gradient(135deg, #da3633, #f85149)' : barGradients[pCls],
+              boxShadow: isDone ? '0 2px 8px rgba(35,134,54,0.3)' : overdue && !hasStartDate ? '0 2px 12px rgba(248,81,73,0.5)' : barShadows[pCls],
               overflow: 'hidden',
             }}
             onClick={() => { if (!didDragRef.current) openDetailPanel(task); }}

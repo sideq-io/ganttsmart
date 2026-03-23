@@ -150,7 +150,7 @@ function parseStartDate(description: string): string | null {
 export async function fetchIssues(
   apiKey: string,
   projectId: string,
-): Promise<{ projectName: string; tasks: Task[]; milestones: Milestone[] }> {
+): Promise<{ projectName: string; tasks: Task[]; doneTasks: Task[]; milestones: Milestone[] }> {
   const data = await gql(
     apiKey,
     `query {
@@ -174,6 +174,23 @@ export async function fetchIssues(
             priority
             state { name type }
             createdAt
+            completedAt
+            assignee { name }
+            team { id }
+          }
+        }
+        doneIssues: issues(first: 100, filter: { completedAt: { null: false } }) {
+          nodes {
+            id
+            identifier
+            title
+            description
+            dueDate
+            url
+            priority
+            state { name type }
+            createdAt
+            completedAt
             assignee { name }
             team { id }
           }
@@ -182,20 +199,25 @@ export async function fetchIssues(
     }`,
   );
 
+  interface IssueNode {
+    id: string; identifier: string; title: string; description: string | null;
+    dueDate: string | null; url: string; priority: number;
+    state: { name: string; type: string } | null; createdAt: string;
+    completedAt: string | null;
+    assignee: { name: string } | null; team: { id: string } | null;
+  }
+
   const project = data.project as {
     name: string;
     projectMilestones: { nodes: Array<{ id: string; name: string; targetDate: string | null }> };
-    issues: { nodes: Array<{
-      id: string; identifier: string; title: string; description: string | null;
-      dueDate: string | null; url: string; priority: number;
-      state: { name: string; type: string } | null; createdAt: string;
-      assignee: { name: string } | null; team: { id: string } | null;
-    }> };
+    issues: { nodes: IssueNode[] };
+    doneIssues: { nodes: IssueNode[] };
   };
 
   if (!project) throw new Error('Project not found');
 
   const issueNodes = project.issues.nodes;
+  const doneIssueNodes = project.doneIssues?.nodes || [];
 
   // Query 2: fetch relations and children using issue UUIDs
   const issueIds = issueNodes.filter((n) => n.dueDate).map((n) => n.id);
@@ -260,35 +282,47 @@ export async function fetchIssues(
     }
   }
 
+  function mapNode(n: IssueNode): Task {
+    const rel = relationsMap[n.identifier] || { blocks: [], blockedBy: [] };
+    const ch = childrenMap[n.identifier] || { total: 0, completed: 0 };
+    const progress = ch.total > 0 ? Math.round((ch.completed / ch.total) * 100) : 0;
+
+    return {
+      id: n.identifier,
+      uuid: n.id,
+      title: n.title,
+      description: n.description || '',
+      due: n.dueDate!,
+      startDate: parseStartDate(n.description || ''),
+      url: n.url,
+      priorityVal: n.priority,
+      priority: PRIORITY_MAP[n.priority] || 'None',
+      status: n.state?.name || '',
+      statusType: n.state?.type || '',
+      assignee: n.assignee?.name || 'Unassigned',
+      teamId: n.team?.id || '',
+      blocks: rel.blocks,
+      blockedBy: rel.blockedBy,
+      progress,
+      totalChildren: ch.total,
+      completedChildren: ch.completed,
+      completedAt: n.completedAt || undefined,
+    };
+  }
+
   const tasks: Task[] = issueNodes
     .filter((n) => n.dueDate)
-    .map((n) => {
-      const rel = relationsMap[n.identifier] || { blocks: [], blockedBy: [] };
-      const ch = childrenMap[n.identifier] || { total: 0, completed: 0 };
-      const progress = ch.total > 0 ? Math.round((ch.completed / ch.total) * 100) : 0;
-
-      return {
-        id: n.identifier,
-        uuid: n.id,
-        title: n.title,
-        description: n.description || '',
-        due: n.dueDate!,
-        startDate: parseStartDate(n.description || ''),
-        url: n.url,
-        priorityVal: n.priority,
-        priority: PRIORITY_MAP[n.priority] || 'None',
-        status: n.state?.name || '',
-        statusType: n.state?.type || '',
-        assignee: n.assignee?.name || 'Unassigned',
-        teamId: n.team?.id || '',
-        blocks: rel.blocks,
-        blockedBy: rel.blockedBy,
-        progress,
-        totalChildren: ch.total,
-        completedChildren: ch.completed,
-      };
-    })
+    .map(mapNode)
     .sort((a, b) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime());
+
+  const doneTasks: Task[] = doneIssueNodes
+    .filter((n) => n.dueDate)
+    .map(mapNode)
+    .sort((a, b) => {
+      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return bTime - aTime; // newest completed first
+    });
 
   const milestones: Milestone[] = (project.projectMilestones?.nodes || []).map(
     (m) => ({
@@ -298,7 +332,7 @@ export async function fetchIssues(
     }),
   );
 
-  return { projectName: project.name, tasks, milestones };
+  return { projectName: project.name, tasks, doneTasks, milestones };
 }
 
 // ---- Mutations (with debouncing for drag operations) ----

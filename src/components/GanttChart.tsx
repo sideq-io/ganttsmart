@@ -6,6 +6,7 @@ import GanttRow from './GanttRow';
 
 interface Props {
   tasks: Task[];
+  doneTasks?: Task[];
   milestones: Milestone[];
   loading: boolean;
   error: string;
@@ -82,8 +83,9 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
   );
 }
 
-export default function GanttChart({ tasks, milestones, loading, error, dayWidth, groupBy, onReschedule, onRescheduleStart, onCycleStatus }: Props) {
+export default function GanttChart({ tasks, doneTasks = [], milestones, loading, error, dayWidth, groupBy, onReschedule, onRescheduleStart, onCycleStatus }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [doneVisible, setDoneVisible] = useState(false);
   const [colWidths, setColWidths] = useState<ColumnWidths>(DEFAULT_WIDTHS);
   const ganttRef = useRef<HTMLDivElement>(null);
   const baseWidthsRef = useRef<ColumnWidths>(DEFAULT_WIDTHS);
@@ -341,6 +343,51 @@ export default function GanttChart({ tasks, milestones, loading, error, dayWidth
           />
         )}
       </div>
+
+      {/* Completed tasks section */}
+      {doneTasks.length > 0 && (
+        <div className="border-t border-border-primary">
+          <button
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-text-secondary hover:bg-bg-hover transition-colors"
+            onClick={() => setDoneVisible((v) => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <svg
+                width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className="text-text-muted shrink-0 transition-transform duration-200"
+                style={{ transform: doneVisible ? 'rotate(90deg)' : 'rotate(0deg)' }}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              <span className="font-medium">Completed</span>
+              <span className="text-xs text-text-muted bg-bg-hover rounded-full px-2 py-0.5">
+                {doneTasks.length}
+              </span>
+            </div>
+            <span className="text-xs text-text-muted">{doneVisible ? 'Hide' : 'Show'}</span>
+          </button>
+
+          {doneVisible && (
+            <table className="border-collapse opacity-60 hover:opacity-100 transition-opacity" style={{ width: fixedColsWidth + totalDays * dayWidth }}>
+              <tbody>
+                {doneTasks.map((task) => (
+                  <GanttRow
+                    key={task.id}
+                    task={task}
+                    chartStart={chartStart}
+                    totalDays={totalDays}
+                    today={today}
+                    dayWidth={dayWidth}
+                    colWidths={colWidths}
+                    isDone
+                  />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -105,6 +105,7 @@ html.light .bar-medium { background: linear-gradient(135deg, #7d5200, #9a6700) !
 html.light .bar-low { background: linear-gradient(135deg, #424a53, #59636e) !important; }
 html.light .bar-none { background: linear-gradient(135deg, #6e7781, #8c959f) !important; }
 html.light .bar-overdue { background: linear-gradient(135deg, #a40e26, #cf222e) !important; }
+html.light .bar-done { background: linear-gradient(135deg, #1a7f37, #218b3e) !important; }
 
 /* Light theme - semi-transparent adjustments */
 html.light .gantt-bar { color: rgba(255,255,255,0.9); }

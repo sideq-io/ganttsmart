@@ -3,6 +3,7 @@ const items = [
   { label: 'High', bg: 'linear-gradient(135deg, #d47519, #ffa657)' },
   { label: 'Medium', bg: 'linear-gradient(135deg, #9e6a03, #d2992a)' },
   { label: 'Low', bg: 'linear-gradient(135deg, #484f58, #8b949e)' },
+  { label: 'Done', bg: 'linear-gradient(135deg, #1a7f37, #2ea043)' },
 ];
 
 export default function Legend() {

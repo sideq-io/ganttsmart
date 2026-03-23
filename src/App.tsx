@@ -30,6 +30,7 @@ function GanttView({ linearToken, onDisconnectLinear, onSignOut }: { linearToken
     selectedProjectId,
     projectName,
     tasks,
+    doneTasks,
     filteredTasks,
     milestones,
     assignees,
@@ -126,6 +127,7 @@ function GanttView({ linearToken, onDisconnectLinear, onSignOut }: { linearToken
       <Legend />
       <GanttChart
         tasks={filteredTasks}
+        doneTasks={doneTasks}
         milestones={milestones}
         loading={loading}
         error={error}

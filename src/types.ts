@@ -17,6 +17,7 @@ export interface Task {
   progress: number;
   totalChildren: number;
   completedChildren: number;
+  completedAt?: string;
 }
 
 export interface Project {

@@ -14,6 +14,7 @@ export function useLinearData(linearToken: string) {
   );
   const [projectName, setProjectName] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [doneTasks, setDoneTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [workflowStates, setWorkflowStates] = useState<WorkflowState[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,7 @@ export function useLinearData(linearToken: string) {
       try {
         const result = await fetchIssues(linearToken, projectId);
         setTasks(result.tasks);
+        setDoneTasks(result.doneTasks);
         setProjectName(result.projectName);
         setMilestones(result.milestones);
         setLastSynced(
@@ -103,6 +105,7 @@ export function useLinearData(linearToken: string) {
       try {
         const result = await fetchIssues(linearToken, projectId);
         setTasks(result.tasks);
+        setDoneTasks(result.doneTasks);
         setProjectName(result.projectName);
         setMilestones(result.milestones);
         setLastSynced(
@@ -120,6 +123,7 @@ export function useLinearData(linearToken: string) {
         const msg = (e as Error).message;
         setError(msg);
         setTasks([]);
+        setDoneTasks([]);
         setMilestones([]);
         toastError(`Failed to load issues: ${msg}`, () => loadIssues(projectId));
       } finally {
@@ -320,6 +324,7 @@ export function useLinearData(linearToken: string) {
     selectedProjectId,
     projectName,
     tasks,
+    doneTasks,
     filteredTasks,
     milestones,
     workflowStates,
