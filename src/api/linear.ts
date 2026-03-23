@@ -225,8 +225,8 @@ export async function fetchIssues(
   // Query 2: fetch relations and children using issue UUIDs
   const issueIds = issueNodes.filter((n) => n.dueDate).map((n) => n.id);
 
-  let relationsMap: Record<string, { blocks: string[]; blockedBy: string[] }> = {};
-  let childrenMap: Record<string, { total: number; completed: number }> = {};
+  const relationsMap: Record<string, { blocks: string[]; blockedBy: string[] }> = {};
+  const childrenMap: Record<string, { total: number; completed: number }> = {};
 
   if (issueIds.length > 0) {
     try {
