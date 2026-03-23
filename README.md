@@ -169,6 +169,8 @@ Copyright (C) 2025-2026 Michel Bitar. All rights reserved.
 ## Authors
 
 **Michel Bitar** — [GitHub](https://github.com/MichelBitar99)
+**Anthony Badran** — [GitHub](https://github.com/anthonybadran)
+
 
 ## Contributors
 
