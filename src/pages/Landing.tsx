@@ -232,7 +232,7 @@ export default function Landing() {
                 <div className="w-2.5 h-2.5 rounded-full bg-success/50" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="px-3 py-0.5 rounded bg-bg-primary/50 text-[10px] text-text-muted">ganttsmart.app</div>
+                <div className="px-3 py-0.5 rounded bg-bg-primary/50 text-[10px] text-text-muted">ganttsmart.com</div>
               </div>
               <div className="w-12" />
             </div>
