@@ -175,9 +175,8 @@ Copyright (C) 2025-2026 sideq.io. All rights reserved.
 ## Contributors
 
 <a href="https://github.com/sideq-io/ganttsmart/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=sideq-io/ganttsmart" />
+  <img src="https://contrib.rocks/image?repo=sideq-io/ganttsmart&max=10" />
 </a>
-
 
 ---
 
