@@ -112,7 +112,18 @@ export default function GanttRow({
   // Bar position
   let barLeft: number;
   let barWidth: number;
-  if (hasStartDate && taskStartDate) {
+  if (isDone && hasStartDate && taskStartDate) {
+    // Done: fixed bar from startDate → dueDate
+    const startDay = daysBetween(chartStart, taskStartDate);
+    const endDay = daysBetween(chartStart, dueDate);
+    barLeft = startDay * dayWidth;
+    barWidth = Math.max((endDay - startDay + 1) * dayWidth, dayWidth);
+  } else if (isDone) {
+    // Done without start date: show a small bar at the due date
+    const endDay = daysBetween(chartStart, dueDate);
+    barLeft = Math.max(endDay - 1, 0) * dayWidth;
+    barWidth = Math.max(2 * dayWidth, dayWidth);
+  } else if (hasStartDate && taskStartDate) {
     const startDay = daysBetween(chartStart, taskStartDate);
     if (overdue) {
       // Single unified bar from startDate → today
@@ -178,6 +189,8 @@ export default function GanttRow({
     barLabel = newStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   } else if (isMoving && moveDays !== 0) {
     barLabel = `${moveDays > 0 ? '+' : ''}${moveDays}d`;
+  } else if (isDone) {
+    barLabel = '✓ Done';
   } else if (task.totalChildren > 0) {
     barLabel = `${task.completedChildren}/${task.totalChildren}`;
   } else {
@@ -471,10 +484,10 @@ export default function GanttRow({
           <span
             className="text-[10px]"
             style={{
-              color: overdue ? '#f85149' : daysLeft <= 14 ? '#ffa657' : undefined,
+              color: isDone ? '#238636' : overdue ? '#f85149' : daysLeft <= 14 ? '#ffa657' : undefined,
             }}
           >
-            {overdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft} days left`}
+            {isDone ? 'Completed' : overdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft} days left`}
           </span>
         </div>
       </td>
