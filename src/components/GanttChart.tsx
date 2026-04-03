@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { GroupBy, Milestone, Task } from '@/types';
-import { Avatar } from '@/utils/avatar';
-import { daysBetween, isWeekend } from '@/utils/date';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import type {GroupBy, Milestone, Task} from '@/types';
+import {Avatar} from '@/utils/avatar';
+import {daysBetween, isWeekend} from '@/utils/date';
 import DependencyArrows from './DependencyArrows';
 import GanttRow from './GanttRow';
 
@@ -25,11 +25,11 @@ export interface ColumnWidths {
   due: number;
 }
 
-const DEFAULT_WIDTHS: ColumnWidths = { task: 360, priority: 90, due: 110 };
-const MIN_WIDTHS: ColumnWidths = { task: 200, priority: 60, due: 80 };
+const DEFAULT_WIDTHS: ColumnWidths = {task: 360, priority: 90, due: 110};
+const MIN_WIDTHS: ColumnWidths = {task: 200, priority: 60, due: 80};
 
 function groupTasks(tasks: Task[], groupBy: GroupBy): { key: string; label: string; tasks: Task[] }[] {
-  if (groupBy === 'none') return [{ key: '__all', label: '', tasks }];
+  if (groupBy === 'none') return [{key: '__all', label: '', tasks}];
 
   const map = new Map<string, Task[]>();
   for (const t of tasks) {
@@ -43,11 +43,11 @@ function groupTasks(tasks: Task[], groupBy: GroupBy): { key: string; label: stri
 
   return Array.from(map.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, tasks]) => ({ key, label: key, tasks }));
+    .map(([key, tasks]) => ({key, label: key, tasks}));
 }
 
 // Resize handle component
-function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
+function ResizeHandle({onResize}: { onResize: (delta: number) => void }) {
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -74,24 +74,24 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
       className="absolute right-0 top-0 bottom-0 w-[5px] cursor-col-resize z-10 group hover:bg-accent/30 transition-colors"
       onMouseDown={handleMouseDown}
     >
-      <div className="absolute right-0 top-0 bottom-0 w-px bg-border-primary group-hover:bg-accent transition-colors" />
+      <div className="absolute right-0 top-0 bottom-0 w-px bg-border-primary group-hover:bg-accent transition-colors"/>
     </div>
   );
 }
 
 export default function GanttChart({
-  tasks,
-  doneTasks = [],
-  milestones,
-  loading,
-  error,
-  dayWidth,
-  groupBy,
-  onReschedule,
-  onRescheduleStart,
-  onCycleStatus,
-  onCreateRelation,
-}: Props) {
+                                     tasks,
+                                     doneTasks = [],
+                                     milestones,
+                                     loading,
+                                     error,
+                                     dayWidth,
+                                     groupBy,
+                                     onReschedule,
+                                     onRescheduleStart,
+                                     onCycleStatus,
+                                     onCreateRelation,
+                                   }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [doneVisible, setDoneVisible] = useState(false);
   const [colWidths, setColWidths] = useState<ColumnWidths>(DEFAULT_WIDTHS);
@@ -215,7 +215,7 @@ export default function GanttChart({
       let baseSet = false;
       return (delta: number) => {
         if (!baseSet) {
-          baseWidthsRef.current = { ...colWidths };
+          baseWidthsRef.current = {...colWidths};
           baseSet = true;
           // Reset on mouseup
           const resetBase = () => {
@@ -242,28 +242,39 @@ export default function GanttChart({
 
   // Detect dependency violations: blocked task starts before blocker is due
   const depViolations = useMemo(() => {
-    const violations = new Map<string, string[]>(); // taskId → list of violated blocker descriptions
+    const violations = new Map<string, string[]>(); // blocked taskId → list of violated blocker IDs
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
-    for (const task of tasks) {
-      if (task.blockedBy.length === 0) continue;
-      const taskStart = task.startDate ? new Date(task.startDate + 'T00:00:00') : today;
+    const addViolation = (blockedId: string, blockerId: string) => {
+      if (!violations.has(blockedId)) violations.set(blockedId, []);
+      const list = violations.get(blockedId)!;
+      if (!list.includes(blockerId)) list.push(blockerId);
+    };
 
+    for (const task of tasks) {
+      // Check via blockedBy: does this task start before its blockers are due?
       for (const blockerId of task.blockedBy) {
         const blocker = taskMap.get(blockerId);
         if (!blocker) continue;
+        const taskStart = task.startDate ? new Date(task.startDate + 'T00:00:00') : today;
         const blockerDue = new Date(blocker.due + 'T00:00:00');
-        if (taskStart < blockerDue) {
-          if (!violations.has(task.id)) violations.set(task.id, []);
-          violations.get(task.id)!.push(blockerId);
-        }
+        if (taskStart <= blockerDue) addViolation(task.id, blockerId);
+      }
+
+      // Check via blocks: do the tasks this one blocks start before this one is due?
+      for (const blockedId of task.blocks) {
+        const blocked = taskMap.get(blockedId);
+        if (!blocked) continue;
+        const blockedStart = blocked.startDate ? new Date(blocked.startDate + 'T00:00:00') : today;
+        const blockerDue = new Date(task.due + 'T00:00:00');
+        if (blockedStart <= blockerDue) addViolation(blockedId, task.id);
       }
     }
     return violations;
   }, [tasks, today]);
 
-  const { chartStart, totalDays } = useMemo(() => {
-    if (!tasks.length) return { chartStart: today, totalDays: 0 };
+  const {chartStart, totalDays} = useMemo(() => {
+    if (!tasks.length) return {chartStart: today, totalDays: 0};
 
     const allDates: number[] = [today.getTime()];
     tasks.forEach((t) => {
@@ -287,11 +298,11 @@ export default function GanttChart({
     const minDaysToFill = Math.ceil(Math.max(viewportWidth - fixedCols, 0) / dayWidth);
     const totalDays = Math.max(dataDays, minDaysToFill);
 
-    return { chartStart, totalDays };
+    return {chartStart, totalDays};
   }, [tasks, milestones, today, colWidths, dayWidth]);
 
   // Calendar header (memoized)
-  const { months, daysCells } = useMemo(() => {
+  const {months, daysCells} = useMemo(() => {
     const months: { label: string; days: number }[] = [];
     const daysCells: { date: Date; isWeekend: boolean; isToday: boolean }[] = [];
 
@@ -301,10 +312,10 @@ export default function GanttChart({
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(chartStart);
       d.setDate(d.getDate() + i);
-      const mk = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const mk = d.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
 
       if (mk !== currentMonth) {
-        if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
+        if (currentMonth) months.push({label: currentMonth, days: currentMonthCount});
         currentMonth = mk;
         currentMonthCount = 0;
       }
@@ -316,9 +327,9 @@ export default function GanttChart({
         isToday: d.getTime() === today.getTime(),
       });
     }
-    if (currentMonth) months.push({ label: currentMonth, days: currentMonthCount });
+    if (currentMonth) months.push({label: currentMonth, days: currentMonthCount});
 
-    return { months, daysCells };
+    return {months, daysCells};
   }, [chartStart, totalDays, today]);
 
   // Milestone positions (memoized)
@@ -329,7 +340,7 @@ export default function GanttChart({
         .map((m) => {
           const mDate = new Date(m.targetDate! + 'T00:00:00');
           const dayOffset = daysBetween(chartStart, mDate);
-          return { ...m, dayOffset };
+          return {...m, dayOffset};
         })
         .filter((m) => m.dayOffset >= 0 && m.dayOffset <= totalDays),
     [milestones, chartStart, totalDays],
@@ -343,7 +354,8 @@ export default function GanttChart({
     return (
       <div className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto">
         <div className="text-center py-20 text-text-secondary">
-          <div className="w-10 h-10 mx-auto mb-4 border-3 border-border-primary border-t-accent rounded-full animate-spin" />
+          <div
+            className="w-10 h-10 mx-auto mb-4 border-3 border-border-primary border-t-accent rounded-full animate-spin"/>
           <div className="text-sm">Fetching issues from Linear...</div>
           <p className="text-xs text-text-muted mt-1">This may take a few seconds</p>
         </div>
@@ -366,15 +378,16 @@ export default function GanttChart({
               strokeLinecap="round"
               className="text-urgent"
             >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
           </div>
           <h3 className="text-base font-semibold text-text-primary mb-2">Something went wrong</h3>
           <p className="text-sm text-text-secondary mb-1 max-w-md mx-auto">{error}</p>
           <p className="text-xs text-text-muted">
-            Press <kbd className="px-1.5 py-0.5 bg-bg-hover rounded border border-border-secondary text-[10px]">R</kbd>{' '}
+            Press <kbd
+            className="px-1.5 py-0.5 bg-bg-hover rounded border border-border-secondary text-[10px]">R</kbd>{' '}
             to retry
           </p>
         </div>
@@ -397,10 +410,10 @@ export default function GanttChart({
               strokeLinecap="round"
               className="text-accent"
             >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </div>
           <h3 className="text-base font-semibold text-text-primary mb-2">No tasks to display</h3>
@@ -430,116 +443,116 @@ export default function GanttChart({
       id="gantt-export-target"
       className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto print:overflow-visible print:border-0"
     >
-      <div ref={innerRef} className="relative" style={{ minWidth: '100%' }}>
-        <table className="border-collapse" style={{ width: fixedColsWidth + totalDays * dayWidth }}>
+      <div ref={innerRef} className="relative" style={{minWidth: '100%'}}>
+        <table className="border-collapse" style={{width: fixedColsWidth + totalDays * dayWidth}}>
           <thead>
-            <tr>
-              <th className={`${thBase} px-4`} style={{ width: colWidths.task, minWidth: MIN_WIDTHS.task }}>
-                Task
-                <ResizeHandle onResize={makeResizeHandler('task')} />
-              </th>
-              <th className={`${thBase} px-3`} style={{ width: colWidths.priority, minWidth: MIN_WIDTHS.priority }}>
-                Priority
-                <ResizeHandle onResize={makeResizeHandler('priority')} />
-              </th>
-              <th className={`${thBase} px-4`} style={{ width: colWidths.due, minWidth: MIN_WIDTHS.due }}>
-                Due Date
-                <ResizeHandle onResize={makeResizeHandler('due')} />
-              </th>
-              <th className="p-0 border-b border-border-primary bg-bg-header sticky top-0 z-5">
-                <div className="flex border-b border-border-primary">
-                  {months.map((m, i) => (
+          <tr>
+            <th className={`${thBase} px-4`} style={{width: colWidths.task, minWidth: MIN_WIDTHS.task}}>
+              Task
+              <ResizeHandle onResize={makeResizeHandler('task')}/>
+            </th>
+            <th className={`${thBase} px-3`} style={{width: colWidths.priority, minWidth: MIN_WIDTHS.priority}}>
+              Priority
+              <ResizeHandle onResize={makeResizeHandler('priority')}/>
+            </th>
+            <th className={`${thBase} px-4`} style={{width: colWidths.due, minWidth: MIN_WIDTHS.due}}>
+              Due Date
+              <ResizeHandle onResize={makeResizeHandler('due')}/>
+            </th>
+            <th className="p-0 border-b border-border-primary bg-bg-header sticky top-0 z-5">
+              <div className="flex border-b border-border-primary">
+                {months.map((m, i) => (
+                  <div
+                    key={i}
+                    className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary py-2.5 text-center border-r border-border-primary"
+                    style={{width: m.days * dayWidth}}
+                  >
+                    {m.label}
+                  </div>
+                ))}
+              </div>
+              <div className="flex relative">
+                {daysCells.map((d, i) => (
+                  <div
+                    key={i}
+                    className={`text-[10px] text-center py-1.5 shrink-0 ${
+                      d.isToday
+                        ? 'text-accent font-bold bg-accent/[0.06]'
+                        : d.isWeekend
+                          ? 'bg-white/[0.02] text-border-secondary'
+                          : 'text-text-muted'
+                    }`}
+                    style={{
+                      width: dayWidth,
+                      borderRight: '1px solid rgba(33,38,45,0.5)',
+                    }}
+                  >
+                    <div className="leading-none">{d.date.getDate()}</div>
                     <div
-                      key={i}
-                      className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary py-2.5 text-center border-r border-border-primary"
-                      style={{ width: m.days * dayWidth }}
+                      className={`text-[8px] leading-none mt-0.5 ${d.isToday ? 'text-accent' : 'text-text-muted/70'}`}
                     >
-                      {m.label}
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.date.getDay()]}
                     </div>
-                  ))}
-                </div>
-                <div className="flex relative">
-                  {daysCells.map((d, i) => (
+                  </div>
+                ))}
+                {milestonesInRange.map((m) => (
+                  <div
+                    key={m.id}
+                    className="absolute top-0 z-10 flex flex-col items-center pointer-events-auto"
+                    style={{
+                      left: m.dayOffset * dayWidth + dayWidth / 2 - 6,
+                      top: -2,
+                    }}
+                    title={`${m.name}${m.targetDate ? ` — ${m.targetDate}` : ''}`}
+                  >
                     <div
-                      key={i}
-                      className={`text-[10px] text-center py-1.5 shrink-0 ${
-                        d.isToday
-                          ? 'text-accent font-bold bg-accent/[0.06]'
-                          : d.isWeekend
-                            ? 'bg-white/[0.02] text-border-secondary'
-                            : 'text-text-muted'
-                      }`}
-                      style={{
-                        width: dayWidth,
-                        borderRight: '1px solid rgba(33,38,45,0.5)',
-                      }}
-                    >
-                      <div className="leading-none">{d.date.getDate()}</div>
-                      <div
-                        className={`text-[8px] leading-none mt-0.5 ${d.isToday ? 'text-accent' : 'text-text-muted/70'}`}
-                      >
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.date.getDay()]}
-                      </div>
-                    </div>
-                  ))}
-                  {milestonesInRange.map((m) => (
-                    <div
-                      key={m.id}
-                      className="absolute top-0 z-10 flex flex-col items-center pointer-events-auto"
-                      style={{
-                        left: m.dayOffset * dayWidth + dayWidth / 2 - 6,
-                        top: -2,
-                      }}
-                      title={`${m.name}${m.targetDate ? ` — ${m.targetDate}` : ''}`}
-                    >
-                      <div
-                        className="w-3 h-3 rotate-45 border-2 border-accent bg-accent/30"
-                        style={{ boxShadow: '0 0 6px rgba(88,166,255,0.4)' }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </th>
-            </tr>
+                      className="w-3 h-3 rotate-45 border-2 border-accent bg-accent/30"
+                      style={{boxShadow: '0 0 6px rgba(88,166,255,0.4)'}}
+                    />
+                  </div>
+                ))}
+              </div>
+            </th>
+          </tr>
           </thead>
           <tbody>
-            {groups.map((group) => (
-              <GroupRows
-                key={group.key}
-                group={group}
-                groupBy={groupBy}
-                showHeader={groupBy !== 'none'}
-                isCollapsed={collapsed.has(group.key)}
-                onToggle={() => toggleCollapse(group.key)}
-                chartStart={chartStart}
-                totalDays={totalDays}
-                today={today}
-                dayWidth={dayWidth}
-                colWidths={colWidths}
-                onReschedule={onReschedule}
-                onRescheduleStart={onRescheduleStart}
-                onCycleStatus={onCycleStatus}
-                onConnectStart={onCreateRelation ? handleConnectStart : undefined}
-                isConnecting={isConnecting}
-                depViolations={depViolations}
-              />
-            ))}
+          {groups.map((group) => (
+            <GroupRows
+              key={group.key}
+              group={group}
+              groupBy={groupBy}
+              showHeader={groupBy !== 'none'}
+              isCollapsed={collapsed.has(group.key)}
+              onToggle={() => toggleCollapse(group.key)}
+              chartStart={chartStart}
+              totalDays={totalDays}
+              today={today}
+              dayWidth={dayWidth}
+              colWidths={colWidths}
+              onReschedule={onReschedule}
+              onRescheduleStart={onRescheduleStart}
+              onCycleStatus={onCycleStatus}
+              onConnectStart={onCreateRelation ? handleConnectStart : undefined}
+              isConnecting={isConnecting}
+              depViolations={depViolations}
+            />
+          ))}
           </tbody>
         </table>
 
         {groupBy === 'none' && (
-          <DependencyArrows tasks={tasks} containerRef={innerRef} depViolations={depViolations} />
+          <DependencyArrows tasks={tasks} containerRef={innerRef} depViolations={depViolations}/>
         )}
 
         {/* Connection line overlay — updated imperatively during drag for performance */}
         <svg
           ref={connectionSvgRef}
           className="absolute top-0 left-0 pointer-events-none z-[4]"
-          style={{ display: 'none', overflow: 'visible' }}
+          style={{display: 'none', overflow: 'visible'}}
         >
           <defs>
             <marker id="dep-arrow-temp" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#58a6ff" opacity="0.9" />
+              <polygon points="0 0, 8 3, 0 6" fill="#58a6ff" opacity="0.9"/>
             </marker>
           </defs>
           <path
@@ -572,9 +585,9 @@ export default function GanttChart({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="text-text-muted shrink-0 transition-transform duration-200"
-                style={{ transform: doneVisible ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                style={{transform: doneVisible ? 'rotate(90deg)' : 'rotate(0deg)'}}
               >
-                <polyline points="9 18 15 12 9 6" />
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
               <span className="font-medium">Completed</span>
               <span className="text-xs text-text-muted bg-bg-hover rounded-full px-2 py-0.5">{doneTasks.length}</span>
@@ -585,21 +598,21 @@ export default function GanttChart({
           {doneVisible && (
             <table
               className="border-collapse opacity-60 hover:opacity-100 transition-opacity"
-              style={{ width: fixedColsWidth + totalDays * dayWidth }}
+              style={{width: fixedColsWidth + totalDays * dayWidth}}
             >
               <tbody>
-                {doneTasks.map((task) => (
-                  <GanttRow
-                    key={task.id}
-                    task={task}
-                    chartStart={chartStart}
-                    totalDays={totalDays}
-                    today={today}
-                    dayWidth={dayWidth}
-                    colWidths={colWidths}
-                    isDone
-                  />
-                ))}
+              {doneTasks.map((task) => (
+                <GanttRow
+                  key={task.id}
+                  task={task}
+                  chartStart={chartStart}
+                  totalDays={totalDays}
+                  today={today}
+                  dayWidth={dayWidth}
+                  colWidths={colWidths}
+                  isDone
+                />
+              ))}
               </tbody>
             </table>
           )}
@@ -611,23 +624,23 @@ export default function GanttChart({
 
 // Sub-component for group rows
 function GroupRows({
-  group,
-  groupBy,
-  showHeader,
-  isCollapsed,
-  onToggle,
-  chartStart,
-  totalDays,
-  today,
-  dayWidth,
-  colWidths,
-  onReschedule,
-  onRescheduleStart,
-  onCycleStatus,
-  onConnectStart,
-  isConnecting,
-  depViolations,
-}: {
+                     group,
+                     groupBy,
+                     showHeader,
+                     isCollapsed,
+                     onToggle,
+                     chartStart,
+                     totalDays,
+                     today,
+                     dayWidth,
+                     colWidths,
+                     onReschedule,
+                     onRescheduleStart,
+                     onCycleStatus,
+                     onConnectStart,
+                     isConnecting,
+                     depViolations,
+                   }: {
   group: { key: string; label: string; tasks: Task[] };
   groupBy: GroupBy;
   showHeader: boolean;
@@ -664,11 +677,11 @@ function GroupRows({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="text-text-muted shrink-0 transition-transform duration-200"
-                style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}
+                style={{transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)'}}
               >
-                <polyline points="9 18 15 12 9 6" />
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
-              {groupBy === 'assignee' && <Avatar name={group.label} size="sm" />}
+              {groupBy === 'assignee' && <Avatar name={group.label} size="sm"/>}
               {group.label}
               <span className="text-text-muted font-normal">({group.tasks.length})</span>
             </div>
