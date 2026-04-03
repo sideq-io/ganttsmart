@@ -538,17 +538,16 @@ export default function GanttRow({
             ))}
           </div>
 
-          {/* Ghost bar — baseline (original plan) overlay */}
+          {/* Ghost bar — baseline (original plan) overlay, rendered above main bar */}
           {baselineBar && (
             <div
-              className="absolute h-[26px] rounded-md top-[3px] z-[1] border border-dashed border-text-muted/40"
+              className="absolute h-[26px] rounded-md top-[3px] z-[3] border-2 border-dashed border-amber-400/60 pointer-events-none"
               style={{
                 left: baselineBar.left,
                 width: baselineBar.width,
-                background: 'repeating-linear-gradient(135deg, transparent, transparent 3px, var(--color-text-muted) 3px, var(--color-text-muted) 4px)',
-                opacity: 0.12,
+                background: 'rgba(251, 191, 36, 0.08)',
               }}
-              title={`Planned: ${baseline?.planned_start || '(no start)'} → ${baseline?.planned_due}`}
+              title={`Originally planned: ${baseline?.planned_start || '(no start)'} → ${baseline?.planned_due}`}
             />
           )}
 

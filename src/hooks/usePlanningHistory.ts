@@ -17,6 +17,12 @@ export interface ChangeEvent {
   changed_at: string;
 }
 
+/** Get the current user ID from the local session (no network call). */
+async function getUserId(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
+}
+
 /**
  * Manages planning history: captures baselines on first load and logs change events.
  * Baselines are the first-seen dates for each task — the "original plan".
@@ -39,13 +45,13 @@ export function usePlanningHistory(projectId: string) {
   // Load existing baselines from DB
   const loadBaselines = useCallback(async () => {
     if (!projectId) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const userId = await getUserId();
+    if (!userId) return;
 
     const { data, error } = await supabase
       .from('task_baselines')
       .select('issue_id, planned_start, planned_due, first_seen_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('project_id', projectId);
 
     if (error) {
@@ -66,8 +72,8 @@ export function usePlanningHistory(projectId: string) {
     async (tasks: Task[]) => {
       if (!projectId || baselinesSynced.current) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = await getUserId();
+      if (!userId) return;
       baselinesSynced.current = true;
 
       // Load current baselines first
@@ -82,7 +88,7 @@ export function usePlanningHistory(projectId: string) {
       if (newBaselines.length === 0) return;
 
       const rows = newBaselines.map((t) => ({
-        user_id: user.id,
+        user_id: userId,
         issue_id: t.id,
         project_id: projectId,
         planned_start: t.startDate,
@@ -117,11 +123,11 @@ export function usePlanningHistory(projectId: string) {
   const logChange = useCallback(
     async (issueId: string, field: string, oldValue: string | null, newValue: string | null) => {
       if (!projectId) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = await getUserId();
+      if (!userId) return;
 
       const { error } = await supabase.from('issue_change_history').insert({
-        user_id: user.id,
+        user_id: userId,
         issue_id: issueId,
         project_id: projectId,
         field_changed: field,
@@ -140,11 +146,11 @@ export function usePlanningHistory(projectId: string) {
   const logStatusTransition = useCallback(
     async (issueId: string, fromStatus: string | null, toStatus: string) => {
       if (!projectId) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = await getUserId();
+      if (!userId) return;
 
       const { error } = await supabase.from('status_transition_log').insert({
-        user_id: user.id,
+        user_id: userId,
         issue_id: issueId,
         project_id: projectId,
         from_status: fromStatus,
@@ -162,13 +168,13 @@ export function usePlanningHistory(projectId: string) {
   const getTaskHistory = useCallback(
     async (issueId: string): Promise<ChangeEvent[]> => {
       if (!projectId) return [];
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      const userId = await getUserId();
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from('issue_change_history')
         .select('issue_id, field_changed, old_value, new_value, changed_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('issue_id', issueId)
         .order('changed_at', { ascending: false })
         .limit(50);
