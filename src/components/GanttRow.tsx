@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Task } from '@/types';
+import type { TaskBaseline } from '@/hooks/usePlanningHistory';
 import type { ColumnWidths } from './GanttChart';
 import { Avatar } from '@/utils/avatar';
 import { isSafeUrl } from '@/utils/url';
@@ -27,6 +28,7 @@ interface Props {
   onConnectStart?: (taskId: string, e: React.MouseEvent) => void;
   isConnecting?: boolean;
   depViolation?: string[]; // list of blocker IDs whose schedule is violated
+  baseline?: TaskBaseline;
   isDone?: boolean;
 }
 
@@ -81,6 +83,7 @@ export default function GanttRow({
   onConnectStart,
   isConnecting,
   depViolation,
+  baseline,
   isDone,
 }: Props) {
   const pCls = priorityClass(task.priorityVal);
@@ -343,6 +346,26 @@ export default function GanttRow({
   const progressWidth = task.totalChildren > 0 ? `${task.progress}%` : undefined;
   const statusDotColor = statusDotColors[task.statusType] || '#484f58';
 
+  // Ghost bar for baseline (planned vs actual) — only show when dates have drifted
+  const baselineBar = (() => {
+    if (!baseline || isDone) return null;
+    const baseStart = baseline.planned_start ? new Date(baseline.planned_start + 'T00:00:00') : null;
+    const baseDue = new Date(baseline.planned_due + 'T00:00:00');
+    const actualStart = taskStartDate;
+    const actualDue = dueDate;
+    // Check if dates have changed
+    const startChanged = (baseStart?.getTime() ?? null) !== (actualStart?.getTime() ?? null);
+    const dueChanged = baseDue.getTime() !== actualDue.getTime();
+    if (!startChanged && !dueChanged) return null;
+    // Compute ghost bar position
+    const ghostStartDate = baseStart || chartStart;
+    const ghostLeft = daysBetween(chartStart, ghostStartDate) * dayWidth;
+    const ghostEndDay = daysBetween(chartStart, baseDue);
+    const ghostStartDay = daysBetween(chartStart, ghostStartDate);
+    const ghostWidth = Math.max((ghostEndDay - ghostStartDay + 1) * dayWidth, dayWidth);
+    return { left: ghostLeft, width: ghostWidth };
+  })();
+
   return (
     <tr
       data-task-id={task.id}
@@ -495,6 +518,20 @@ export default function GanttRow({
               />
             ))}
           </div>
+
+          {/* Ghost bar — baseline (original plan) overlay */}
+          {baselineBar && (
+            <div
+              className="absolute h-[26px] rounded-md top-[3px] z-[1] border border-dashed border-text-muted/40"
+              style={{
+                left: baselineBar.left,
+                width: baselineBar.width,
+                background: 'repeating-linear-gradient(135deg, transparent, transparent 3px, var(--color-text-muted) 3px, var(--color-text-muted) 4px)',
+                opacity: 0.12,
+              }}
+              title={`Planned: ${baseline?.planned_start || '(no start)'} → ${baseline?.planned_due}`}
+            />
+          )}
 
           {/* Main bar */}
           <div

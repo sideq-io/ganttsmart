@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {GroupBy, Milestone, Task} from '@/types';
+import type {TaskBaseline} from '@/hooks/usePlanningHistory';
 import {Avatar} from '@/utils/avatar';
 import {daysBetween, isWeekend} from '@/utils/date';
 import DependencyArrows from './DependencyArrows';
@@ -17,6 +18,7 @@ interface Props {
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
   onCycleStatus?: (taskUuid: string) => Promise<void>;
   onCreateRelation?: (sourceTaskId: string, targetTaskId: string) => Promise<void>;
+  baselines?: Map<string, TaskBaseline>;
 }
 
 export interface ColumnWidths {
@@ -91,6 +93,7 @@ export default function GanttChart({
                                      onRescheduleStart,
                                      onCycleStatus,
                                      onCreateRelation,
+                                     baselines,
                                    }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [doneVisible, setDoneVisible] = useState(false);
@@ -535,6 +538,7 @@ export default function GanttChart({
               onConnectStart={onCreateRelation ? handleConnectStart : undefined}
               isConnecting={isConnecting}
               depViolations={depViolations}
+              baselines={baselines}
             />
           ))}
           </tbody>
@@ -640,6 +644,7 @@ function GroupRows({
                      onConnectStart,
                      isConnecting,
                      depViolations,
+                     baselines,
                    }: {
   group: { key: string; label: string; tasks: Task[] };
   groupBy: GroupBy;
@@ -657,6 +662,7 @@ function GroupRows({
   onConnectStart?: (taskId: string, e: React.MouseEvent) => void;
   isConnecting?: boolean;
   depViolations?: Map<string, string[]>;
+  baselines?: Map<string, TaskBaseline>;
 }) {
   return (
     <>
@@ -704,6 +710,7 @@ function GroupRows({
             onConnectStart={onConnectStart}
             isConnecting={isConnecting}
             depViolation={depViolations?.get(task.id)}
+            baseline={baselines?.get(task.id)}
           />
         ))}
     </>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Task } from '@/types';
+import type { TaskBaseline } from '@/hooks/usePlanningHistory';
 import { Avatar } from '@/utils/avatar';
 import { isSafeUrl } from '@/utils/url';
 import { priorityColors, statusDotColors } from '@/utils/colors';
@@ -10,6 +11,11 @@ import { stripMarkdown } from '@/utils/markdown';
 let globalOpenPanel: ((task: Task) => void) | null = null;
 let globalClosePanel: (() => void) | null = null;
 let globalRemoveRelation: ((sourceId: string, targetId: string) => Promise<void>) | null = null;
+let globalBaselines: Map<string, TaskBaseline> = new Map();
+
+export function setBaselinesForPanel(baselines: Map<string, TaskBaseline>) {
+  globalBaselines = baselines;
+}
 
 export function openDetailPanel(task: Task) {
   globalOpenPanel?.(task);
@@ -219,6 +225,44 @@ export default function DetailPanel() {
                 </span>
               </div>
             </div>
+
+            {/* Baseline drift */}
+            {(() => {
+              const bl = globalBaselines.get(task.id);
+              if (!bl) return null;
+              const actualDue = new Date(task.due + 'T00:00:00');
+              const plannedDue = new Date(bl.planned_due + 'T00:00:00');
+              const dueDrift = Math.round((actualDue.getTime() - plannedDue.getTime()) / 86400000);
+              const actualStart = task.startDate ? new Date(task.startDate + 'T00:00:00') : null;
+              const plannedStart = bl.planned_start ? new Date(bl.planned_start + 'T00:00:00') : null;
+              const startDrift = actualStart && plannedStart
+                ? Math.round((actualStart.getTime() - plannedStart.getTime()) / 86400000)
+                : null;
+              if (dueDrift === 0 && (startDrift === null || startDrift === 0)) return null;
+              return (
+                <div className="mt-3 p-2.5 rounded-lg bg-bg-primary border border-border-primary">
+                  <div className="text-[10px] font-medium text-text-muted mb-1.5">Baseline Drift</div>
+                  {startDrift !== null && startDrift !== 0 && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-text-muted">Start</span>
+                      <span style={{ color: startDrift > 0 ? '#f0883e' : '#58a6ff' }}>
+                        {formatDateShort(bl.planned_start!)} → {formatDateShort(task.startDate!)}
+                        <span className="ml-1 font-semibold">({startDrift > 0 ? '+' : ''}{startDrift}d)</span>
+                      </span>
+                    </div>
+                  )}
+                  {dueDrift !== 0 && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-text-muted">Due</span>
+                      <span style={{ color: dueDrift > 0 ? '#f0883e' : '#58a6ff' }}>
+                        {formatDateShort(bl.planned_due)} → {formatDateShort(task.due)}
+                        <span className="ml-1 font-semibold">({dueDrift > 0 ? '+' : ''}{dueDrift}d)</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Progress */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AuthPage from '@/components/AuthPage';
 import FilterBar from '@/components/FilterBar';
 import GanttChart from '@/components/GanttChart';
@@ -9,9 +9,10 @@ import Onboarding from '@/components/Onboarding';
 import StatsRow from '@/components/StatsRow';
 import ToastContainer from '@/components/Toast';
 import Toolbar from '@/components/Toolbar';
-import DetailPanel, { setRemoveRelationHandler } from '@/components/DetailPanel';
+import DetailPanel, { setRemoveRelationHandler, setBaselinesForPanel } from '@/components/DetailPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useLinearData } from '@/hooks/useLinearData';
+import { usePlanningHistory } from '@/hooks/usePlanningHistory';
 import { useTheme } from '@/hooks/useTheme';
 import { formatDate } from '@/utils/date';
 
@@ -58,11 +59,54 @@ function GanttView({
     removeRelation,
   } = useLinearData(linearToken, onDisconnectLinear);
 
+  // Planning history: track baselines and log changes
+  const { baselines, syncBaselines, logChange, logStatusTransition } = usePlanningHistory(selectedProjectId);
+
+  // Sync baselines whenever tasks load
+  useEffect(() => {
+    if (tasks.length > 0) syncBaselines(tasks);
+  }, [tasks, syncBaselines]);
+
+  // Wrap reschedule to log due date changes
+  const rescheduleWithHistory = useCallback(
+    async (taskUuid: string, newDueDate: string) => {
+      const task = tasks.find((t) => t.uuid === taskUuid);
+      if (task) logChange(task.id, 'due_date', task.due, newDueDate);
+      return reschedule(taskUuid, newDueDate);
+    },
+    [reschedule, tasks, logChange],
+  );
+
+  // Wrap rescheduleStart to log start date changes
+  const rescheduleStartWithHistory = useCallback(
+    async (taskUuid: string, newStartDate: string) => {
+      const task = tasks.find((t) => t.uuid === taskUuid);
+      if (task) logChange(task.id, 'start_date', task.startDate, newStartDate);
+      return rescheduleStart(taskUuid, newStartDate);
+    },
+    [rescheduleStart, tasks, logChange],
+  );
+
+  // Wrap cycleStatus to log status transitions
+  const cycleStatusWithHistory = useCallback(
+    async (taskUuid: string) => {
+      const task = tasks.find((t) => t.uuid === taskUuid);
+      if (task) logStatusTransition(task.id, task.status, '(next)');
+      return cycleStatus(taskUuid);
+    },
+    [cycleStatus, tasks, logStatusTransition],
+  );
+
   // Register the remove handler for DetailPanel's × buttons
   useEffect(() => {
     setRemoveRelationHandler(removeRelation);
     return () => setRemoveRelationHandler(null);
   }, [removeRelation]);
+
+  // Keep DetailPanel's baselines in sync
+  useEffect(() => {
+    setBaselinesForPanel(baselines);
+  }, [baselines]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -145,10 +189,11 @@ function GanttView({
         error={error}
         dayWidth={dayWidth}
         groupBy={groupBy}
-        onReschedule={reschedule}
-        onRescheduleStart={rescheduleStart}
-        onCycleStatus={cycleStatus}
+        onReschedule={rescheduleWithHistory}
+        onRescheduleStart={rescheduleStartWithHistory}
+        onCycleStatus={cycleStatusWithHistory}
         onCreateRelation={createRelation}
+        baselines={baselines}
       />
       <DetailPanel />
       <ToastContainer />
