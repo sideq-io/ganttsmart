@@ -65,10 +65,10 @@ export function usePlanningHistory(projectId: string) {
   const syncBaselines = useCallback(
     async (tasks: Task[]) => {
       if (!projectId || baselinesSynced.current) return;
-      baselinesSynced.current = true;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      baselinesSynced.current = true;
 
       // Load current baselines first
       let currentBaselines = baselines;
