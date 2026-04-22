@@ -29,8 +29,8 @@ export interface ColumnWidths {
   due: number;
 }
 
-const DEFAULT_WIDTHS: ColumnWidths = {task: 360, priority: 90, due: 110};
-const MIN_WIDTHS: ColumnWidths = {task: 200, priority: 60, due: 80};
+const DEFAULT_WIDTHS: ColumnWidths = {task: 300, priority: 90, due: 78};
+const MIN_WIDTHS: ColumnWidths = {task: 220, priority: 80, due: 70};
 
 function groupTasks(tasks: Task[], groupBy: GroupBy): { key: string; label: string; tasks: Task[] }[] {
   if (groupBy === 'none') return [{key: '__all', label: '', tasks}];
@@ -371,8 +371,8 @@ export default function GanttChart({
   // Early returns — after all hooks
   if (loading) {
     return (
-      <div className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto">
-        <div className="text-center py-20 text-text-secondary">
+      <div className="h-full w-full bg-bg-primary overflow-hidden flex items-center justify-center">
+        <div className="text-center text-text-secondary">
           <div
             className="w-10 h-10 mx-auto mb-4 border-3 border-border-primary border-t-accent rounded-full animate-spin"/>
           <div className="text-sm">Fetching issues from Linear...</div>
@@ -384,7 +384,7 @@ export default function GanttChart({
 
   if (error) {
     return (
-      <div className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto">
+      <div className="h-full w-full bg-bg-primary overflow-hidden flex items-center justify-center">
         <div className="text-center py-20 px-6">
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-urgent/10 flex items-center justify-center">
             <svg
@@ -416,7 +416,7 @@ export default function GanttChart({
 
   if (!tasks.length) {
     return (
-      <div className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto">
+      <div className="h-full w-full bg-bg-primary overflow-auto flex items-center justify-center">
         <div className="text-center py-16 px-6">
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
             <svg
@@ -454,19 +454,19 @@ export default function GanttChart({
   }
 
   const thBase =
-    'py-3.5 text-[11px] font-medium tracking-wide text-text-secondary text-left border-b border-border-primary bg-bg-header sticky top-0 z-5 relative select-none';
+    'h-[52px] text-[11px] font-bold uppercase tracking-[0.07em] text-text-muted text-left border-b-2 border-border-primary bg-bg-header sticky top-0 z-5 relative select-none border-r border-border-primary';
 
   return (
     <div
       ref={ganttRef}
       id="gantt-export-target"
-      className="bg-bg-card rounded-xl border border-border-primary overflow-x-auto print:overflow-visible print:border-0"
+      className="h-full w-full bg-bg-primary overflow-auto print:overflow-visible print:border-0"
     >
       <div ref={innerRef} className="relative" style={{minWidth: '100%'}}>
         <table className="border-collapse" style={{width: fixedColsWidth + totalDays * dayWidth}}>
           <thead>
           <tr>
-            <th className={`${thBase} px-4`} style={{width: colWidths.task, minWidth: MIN_WIDTHS.task}}>
+            <th className={`${thBase} px-[18px]`} style={{width: colWidths.task, minWidth: MIN_WIDTHS.task}}>
               Task
               <ResizeHandle onResize={makeResizeHandler('task')}/>
             </th>
@@ -474,11 +474,11 @@ export default function GanttChart({
               Priority
               <ResizeHandle onResize={makeResizeHandler('priority')}/>
             </th>
-            <th className={`${thBase} px-4`} style={{width: colWidths.due, minWidth: MIN_WIDTHS.due}}>
-              Due Date
+            <th className={`${thBase} px-3`} style={{width: colWidths.due, minWidth: MIN_WIDTHS.due}}>
+              Due
               <ResizeHandle onResize={makeResizeHandler('due')}/>
             </th>
-            <th className="p-0 border-b border-border-primary bg-bg-header sticky top-0 z-5">
+            <th className="p-0 border-b-2 border-border-primary bg-bg-header sticky top-0 z-5">
               <div className="flex border-b border-border-primary">
                 {months.map((m, i) => (
                   <div
@@ -494,16 +494,15 @@ export default function GanttChart({
                 {daysCells.map((d, i) => (
                   <div
                     key={i}
-                    className={`text-[10px] text-center py-1.5 shrink-0 ${
+                    className={`text-[10px] text-center py-1.5 shrink-0 border-r border-border-primary/60 ${
                       d.isToday
-                        ? 'text-accent font-bold bg-accent/[0.06]'
+                        ? 'text-accent font-bold bg-accent/[0.08]'
                         : d.isWeekend
-                          ? 'bg-white/[0.02] text-border-secondary'
+                          ? 'bg-bg-hover/40 text-text-muted'
                           : 'text-text-muted'
                     }`}
                     style={{
                       width: dayWidth,
-                      borderRight: '1px solid rgba(33,38,45,0.5)',
                     }}
                   >
                     <div className="leading-none">{d.date.getDate()}</div>
@@ -526,7 +525,7 @@ export default function GanttChart({
                   >
                     <div
                       className="w-3 h-3 rotate-45 border-2 border-accent bg-accent/30"
-                      style={{boxShadow: '0 0 6px rgba(88,166,255,0.4)'}}
+                      style={{boxShadow: '0 0 6px rgba(124,92,252,0.45)'}}
                     />
                   </div>
                 ))}
@@ -572,16 +571,16 @@ export default function GanttChart({
         >
           <defs>
             <marker id="dep-arrow-temp" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#58a6ff" opacity="0.9"/>
+              <polygon points="0 0, 8 3, 0 6" fill="#7c5cfc" opacity="0.9"/>
             </marker>
           </defs>
           <path
             ref={connectionPathRef}
             fill="none"
-            stroke="#58a6ff"
+            stroke="#7c5cfc"
             strokeWidth="2"
             strokeDasharray="8 4"
-            opacity="0.8"
+            opacity="0.85"
             markerEnd="url(#dep-arrow-temp)"
           />
         </svg>

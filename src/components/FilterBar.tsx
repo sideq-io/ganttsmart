@@ -29,29 +29,17 @@ const PRIORITY_CHIPS = [
 ];
 
 const chipActiveColors: Record<string, string> = {
-  urgent: 'border-urgent text-urgent bg-urgent/10',
-  high: 'border-high text-high bg-high/10',
-  medium: 'border-medium text-medium bg-medium/10',
-  low: 'border-low text-low bg-low/15',
-  none: 'border-accent text-accent bg-accent/10',
+  urgent: 'border-urgent/60 text-urgent bg-urgent/10',
+  high: 'border-high/60 text-high bg-high/10',
+  medium: 'border-medium/60 text-medium bg-medium/10',
+  low: 'border-low/60 text-low bg-low/15',
+  none: 'border-accent/60 text-accent bg-accent/10',
 };
-
-const labelClass = 'text-[11.5px] text-text-secondary font-medium mr-0.5 shrink-0';
 
 // Icons
 function SearchIcon() {
   return (
-    <svg
-      className="absolute left-2.5 text-text-muted pointer-events-none"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg className="absolute left-2.5 text-text-muted pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
@@ -60,17 +48,7 @@ function SearchIcon() {
 
 function FolderIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-text-muted shrink-0"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0">
       <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
     </svg>
   );
@@ -78,17 +56,7 @@ function FolderIcon() {
 
 function UsersIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-text-muted shrink-0"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 00-3-3.87" />
@@ -99,19 +67,31 @@ function UsersIcon() {
 
 function StatusIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-text-muted shrink-0"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0">
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function GroupIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }
@@ -137,7 +117,24 @@ export default function FilterBar({
     onFiltersChange({ ...filters, priorities: next });
   };
 
-  const isFiltered = filters.assignee || filters.status || filters.search || filters.priorities.size < 5 || filters.dateFrom || filters.dateTo;
+  const hasSearch = !!filters.search;
+  const hasAssignee = !!filters.assignee;
+  const hasStatus = !!filters.status;
+  const hasDateRange = !!filters.dateFrom || !!filters.dateTo;
+  const prioritiesFiltered = filters.priorities.size > 0 && filters.priorities.size < 5;
+  const anyActiveChip = hasSearch || hasAssignee || hasStatus || hasDateRange || prioritiesFiltered;
+
+  const clearAll = () => {
+    onFiltersChange({
+      ...filters,
+      search: '',
+      assignee: '',
+      status: '',
+      dateFrom: '',
+      dateTo: '',
+      priorities: new Set([0, 1, 2, 3, 4]),
+    });
+  };
 
   // Build dropdown options
   const projectOptions: DropdownOption[] = useMemo(
@@ -155,16 +152,36 @@ export default function FilterBar({
     [statuses],
   );
 
-  const selectClass =
-    'py-[7px] pl-3 pr-7 bg-bg-card border border-border-secondary rounded-md text-text-primary text-xs font-medium cursor-pointer outline-none transition-colors hover:border-text-muted focus:border-accent appearance-none bg-no-repeat bg-[right_10px_center] bg-[length:10px_6px] max-w-[180px]';
-  const selectBgImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238b949e' d='M1 1l4 4 4-4'/%3E%3C/svg%3E")`;
+  const groupOptions: DropdownOption[] = useMemo(
+    () => [
+      { value: 'none', label: 'No grouping', icon: <GroupIcon /> },
+      { value: 'assignee', label: 'Group by assignee', icon: <GroupIcon /> },
+      { value: 'priority', label: 'Group by priority', icon: <GroupIcon /> },
+      { value: 'status', label: 'Group by status', icon: <GroupIcon /> },
+    ],
+    [],
+  );
 
   return (
-    <div className="flex items-center gap-2.5 mb-6 flex-wrap print:hidden">
-      {/* Project */}
-      {!hideProjectSelector && (
-        <>
-          <span className={labelClass}>Project</span>
+    <div className="shrink-0 border-b border-border-primary bg-bg-header print:hidden relative z-20">
+      {/* Main filter row — 48px */}
+      <div className="h-12 flex items-center gap-2 px-4">
+        {/* Search */}
+        <div className="relative flex items-center shrink-0">
+          <SearchIcon />
+          <input
+            type="text"
+            value={filters.search}
+            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            placeholder="Search tasks…"
+            className="h-8 pl-8 pr-3 bg-bg-card border border-border-primary rounded-md text-text-primary text-xs outline-none transition-colors w-[200px] hover:border-border-secondary focus:border-accent placeholder:text-text-muted"
+          />
+        </div>
+
+        <div className="w-px h-5 bg-border-primary shrink-0" />
+
+        {/* Project */}
+        {!hideProjectSelector && (
           <CustomDropdown
             value={selectedProjectId}
             options={projectOptions}
@@ -173,97 +190,123 @@ export default function FilterBar({
             onChange={(v) => onSelectProject(v)}
             required
           />
-          <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden sm:block" />
-        </>
-      )}
+        )}
 
-      {/* Assignee */}
-      <span className={`${labelClass} hidden sm:inline`}>Assignee</span>
-      <CustomDropdown
-        value={filters.assignee}
-        options={assigneeOptions}
-        placeholder="All Assignees"
-        placeholderIcon={<UsersIcon />}
-        onChange={(v) => onFiltersChange({ ...filters, assignee: v })}
-      />
-
-      {/* Status */}
-      <span className={`${labelClass} hidden sm:inline`}>Status</span>
-      <CustomDropdown
-        value={filters.status}
-        options={statusOptions}
-        placeholder="All Statuses"
-        placeholderIcon={<StatusIcon />}
-        onChange={(v) => onFiltersChange({ ...filters, status: v })}
-      />
-
-      <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden md:block" />
-
-      {/* Priority chips */}
-      <span className={`${labelClass} hidden md:inline`}>Priority</span>
-      <div className="flex gap-1.5 flex-wrap items-center">
-        {PRIORITY_CHIPS.map((c) => {
-          const active = filters.priorities.has(c.val);
-          return (
-            <button
-              key={c.val}
-              onClick={() => togglePriority(c.val)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all border select-none active:scale-95 ${
-                active
-                  ? chipActiveColors[c.cls]
-                  : 'bg-bg-hover border-border-secondary text-text-secondary hover:bg-border-secondary hover:text-text-primary'
-              }`}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden lg:block" />
-
-      {/* Group by */}
-      <span className={`${labelClass} hidden lg:inline`}>Group</span>
-      <select
-        value={groupBy}
-        onChange={(e) => onGroupByChange(e.target.value as GroupBy)}
-        className={selectClass}
-        style={{ backgroundImage: selectBgImage }}
-      >
-        <option value="none">None</option>
-        <option value="assignee">Assignee</option>
-        <option value="priority">Priority</option>
-        <option value="status">Status</option>
-      </select>
-
-      <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden lg:block" />
-
-      {/* Date range */}
-      <DateRangePicker
-        from={filters.dateFrom}
-        to={filters.dateTo}
-        onChange={(dateFrom, dateTo) => onFiltersChange({ ...filters, dateFrom, dateTo })}
-      />
-
-      <div className="w-px h-5 bg-border-secondary/50 mx-1 hidden lg:block" />
-
-      {/* Search */}
-      <div className="relative flex items-center w-full sm:w-auto">
-        <SearchIcon />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-          placeholder="Search tasks..."
-          className="py-[7px] pl-8 pr-3 bg-bg-card border border-border-secondary rounded-md text-text-primary text-xs font-normal outline-none transition-colors w-full sm:w-[200px] hover:border-text-muted focus:border-accent placeholder:text-text-muted"
+        {/* Assignee */}
+        <CustomDropdown
+          value={filters.assignee}
+          options={assigneeOptions}
+          placeholder="Assignee"
+          placeholderIcon={<UsersIcon />}
+          onChange={(v) => onFiltersChange({ ...filters, assignee: v })}
         />
+
+        {/* Status */}
+        <CustomDropdown
+          value={filters.status}
+          options={statusOptions}
+          placeholder="Status"
+          placeholderIcon={<StatusIcon />}
+          onChange={(v) => onFiltersChange({ ...filters, status: v })}
+        />
+
+        <div className="w-px h-5 bg-border-primary shrink-0" />
+
+        {/* Priority chips */}
+        <div className="flex gap-1 items-center shrink-0">
+          {PRIORITY_CHIPS.map((c) => {
+            const active = filters.priorities.has(c.val);
+            return (
+              <button
+                key={c.val}
+                onClick={() => togglePriority(c.val)}
+                className={`h-7 px-2.5 rounded-full text-[11px] font-medium cursor-pointer transition-all border select-none active:scale-95 ${
+                  active
+                    ? chipActiveColors[c.cls]
+                    : 'bg-bg-card border-border-primary text-text-muted hover:border-border-secondary hover:text-text-secondary'
+                }`}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="w-px h-5 bg-border-primary shrink-0" />
+
+        {/* Group by */}
+        <CustomDropdown
+          value={groupBy === 'none' ? '' : groupBy}
+          options={groupOptions}
+          placeholder="No grouping"
+          placeholderIcon={<GroupIcon />}
+          onChange={(v) => onGroupByChange((v || 'none') as GroupBy)}
+          required
+        />
+
+        {/* Date range */}
+        <DateRangePicker
+          from={filters.dateFrom}
+          to={filters.dateTo}
+          onChange={(dateFrom, dateTo) => onFiltersChange({ ...filters, dateFrom, dateTo })}
+        />
+
+        <div className="flex-1" />
+
+        {/* Count pill */}
+        <span className="shrink-0 bg-bg-hover text-text-secondary text-[11px] font-medium font-mono tabular-nums px-2.5 h-7 rounded-full flex items-center">
+          {filteredCount}/{totalCount}
+        </span>
       </div>
 
-      {isFiltered && (
-        <span className="bg-accent/10 text-accent text-[11px] font-medium px-2.5 py-0.5 rounded-full ml-auto">
-          {filteredCount} of {totalCount}
-        </span>
+      {/* Active filter chips row */}
+      {anyActiveChip && (
+        <div className="flex items-center gap-1.5 px-4 py-1.5 border-t border-border-primary/50 bg-bg-primary/40 flex-wrap">
+          <span className="text-[10.5px] uppercase tracking-wider text-text-muted font-semibold mr-1">Filters</span>
+          {hasSearch && (
+            <ActiveChip label={`"${filters.search}"`} onClear={() => onFiltersChange({ ...filters, search: '' })} />
+          )}
+          {hasAssignee && (
+            <ActiveChip label={filters.assignee} onClear={() => onFiltersChange({ ...filters, assignee: '' })} />
+          )}
+          {hasStatus && (
+            <ActiveChip label={filters.status} onClear={() => onFiltersChange({ ...filters, status: '' })} />
+          )}
+          {prioritiesFiltered && (
+            <ActiveChip
+              label={`${filters.priorities.size} priorit${filters.priorities.size === 1 ? 'y' : 'ies'}`}
+              onClear={() => onFiltersChange({ ...filters, priorities: new Set([0, 1, 2, 3, 4]) })}
+            />
+          )}
+          {hasDateRange && (
+            <ActiveChip
+              label={`${filters.dateFrom || '…'} → ${filters.dateTo || '…'}`}
+              onClear={() => onFiltersChange({ ...filters, dateFrom: '', dateTo: '' })}
+            />
+          )}
+          <button
+            onClick={clearAll}
+            className="ml-1 text-[11px] text-text-muted hover:text-text-primary cursor-pointer underline underline-offset-2 decoration-dotted"
+          >
+            Clear all
+          </button>
+        </div>
       )}
     </div>
+  );
+}
+
+function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-accent/10 border border-accent/30 text-[11px] font-medium text-accent">
+      <span className="truncate max-w-[180px]">{label}</span>
+      <button
+        onClick={onClear}
+        className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-accent/20 cursor-pointer"
+        title="Clear filter"
+      >
+        <XIcon />
+      </button>
+    </span>
   );
 }

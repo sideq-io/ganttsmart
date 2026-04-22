@@ -32,44 +32,6 @@ interface Props {
   isDone?: boolean;
 }
 
-// Priority SVG icons (tiny inline)
-function PriorityIcon({ val }: { val: number }) {
-  const cls = 'inline-block shrink-0';
-  if (val === 1)
-    return (
-      <svg className={cls} width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-        <path
-          d="M8 1.5a.5.5 0 01.5.5v5.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 7.793V2a.5.5 0 01.5-.5z"
-          transform="rotate(180 8 8)"
-        />
-        <path d="M3.5 13a.5.5 0 01.5-.5h8a.5.5 0 010 1H4a.5.5 0 01-.5-.5z" transform="rotate(180 8 8)" />
-      </svg>
-    );
-  if (val === 2)
-    return (
-      <svg className={cls} width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M8 3l4 5H4l4-5z" />
-      </svg>
-    );
-  if (val === 3)
-    return (
-      <svg className={cls} width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-        <rect x="3" y="7" width="10" height="2" rx="1" />
-      </svg>
-    );
-  if (val === 4)
-    return (
-      <svg className={cls} width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M8 13l-4-5h8l-4 5z" />
-      </svg>
-    );
-  return (
-    <svg className={cls} width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="4" />
-    </svg>
-  );
-}
-
 export default function GanttRow({
   task,
   chartStart,
@@ -363,7 +325,7 @@ export default function GanttRow({
   }
 
   const progressWidth = task.totalChildren > 0 ? `${task.progress}%` : undefined;
-  const statusDotColor = statusDotColors[task.statusType] || '#484f58';
+  const statusDotColor = statusDotColors[task.statusType] || '#52525b';
 
   // Ghost bar for baseline (planned vs actual) — only show when dates have drifted
   const baselineBar = (() => {
@@ -416,19 +378,19 @@ export default function GanttRow({
     >
       {/* Task info */}
       <td
-        className="py-3 px-4 border-b border-border-primary align-middle overflow-hidden"
-        style={{ width: colWidths.task, minWidth: 200, maxWidth: colWidths.task }}
+        className="h-[56px] px-[18px] border-b border-r border-border-primary align-middle overflow-hidden"
+        style={{ width: colWidths.task, minWidth: 220, maxWidth: colWidths.task }}
       >
-        <div className="flex items-start gap-2.5">
-          <Avatar name={task.assignee} size="sm" className="mt-0.5" />
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Avatar name={task.assignee} size="sm" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <a
                 href={isSafeUrl(task.url) ? task.url : '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] font-semibold tracking-wide hover:underline"
-                style={{ color: idColors[pCls] }}
+                className="font-mono text-[10px] text-text-muted tracking-[0.03em] hover:text-accent hover:underline shrink-0"
+                onClick={(e) => e.stopPropagation()}
               >
                 {task.id}
               </a>
@@ -450,7 +412,7 @@ export default function GanttRow({
               )}
               {depViolation && depViolation.length > 0 && (
                 <span
-                  className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-[#f0883e] bg-[#f0883e]/10 rounded px-1 py-[1px] shrink-0 cursor-help"
+                  className="inline-flex items-center gap-0.5 shrink-0 cursor-help text-high"
                   title={`Starts before ${depViolation.length === 1 ? depViolation[0] + ' is' : depViolation.join(', ') + ' are'} due — dependency may be violated`}
                 >
                   <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
@@ -458,32 +420,30 @@ export default function GanttRow({
                   </svg>
                 </span>
               )}
+              {task.totalChildren > 0 && (
+                <span className="text-[9px] font-mono text-text-muted shrink-0 tabular-nums" title={`${task.completedChildren} of ${task.totalChildren} subtasks complete`}>
+                  {task.completedChildren}/{task.totalChildren}
+                </span>
+              )}
+              {/* Status dot — clickable to cycle */}
+              {onCycleStatus && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCycleStatus(task.uuid);
+                  }}
+                  className="w-2 h-2 rounded-full shrink-0 hover:scale-125 transition-transform cursor-pointer ml-auto"
+                  style={{ backgroundColor: statusDotColor }}
+                  title={`${task.status} — click to cycle`}
+                />
+              )}
             </div>
             <div
               className={`text-[13px] font-medium text-text-primary leading-snug truncate ${isDone ? 'line-through opacity-70' : ''}`}
               style={{ maxWidth: colWidths.task - 60 }}
+              title={task.title}
             >
-              {isDone && <span className="text-success mr-1">✓</span>}
               {task.title}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              {/* Status chip */}
-              <button
-                onClick={() => onCycleStatus?.(task.uuid)}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-bg-hover border border-border-primary hover:border-accent hover:text-accent cursor-pointer transition-colors text-text-secondary"
-                title="Click to cycle status"
-              >
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: statusDotColor }} />
-                {task.status}
-              </button>
-              {/* Assignee name */}
-              <span className="text-[10.5px] text-text-secondary">{task.assignee}</span>
-              {/* Subtask count */}
-              {task.totalChildren > 0 && (
-                <span className="text-[10px] text-text-muted">
-                  {task.completedChildren}/{task.totalChildren} subtasks
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -491,49 +451,56 @@ export default function GanttRow({
 
       {/* Priority */}
       <td
-        className="py-3 px-3 border-b border-border-primary align-middle"
-        style={{ width: colWidths.priority, minWidth: 60 }}
+        className="h-[56px] px-3 border-b border-r border-border-primary align-middle"
+        style={{ width: colWidths.priority, minWidth: 80 }}
       >
         <span
-          className={`inline-flex items-center gap-1 text-[11px] font-semibold py-0.5 px-2 rounded-full tracking-wide ${priorityBadgeClasses[pCls]}`}
+          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold py-[3px] pl-[7px] pr-2 rounded-full ${priorityBadgeClasses[pCls]}`}
         >
-          <PriorityIcon val={task.priorityVal} />
+          <span
+            className="w-[6px] h-[6px] rounded-full shrink-0"
+            style={{
+              backgroundColor: idColors[pCls],
+              boxShadow: `0 0 5px ${idColors[pCls]}`,
+            }}
+          />
           {task.priority}
         </span>
       </td>
 
       {/* Due date */}
       <td
-        className="py-3 px-4 text-xs text-text-secondary whitespace-nowrap border-b border-border-primary align-middle tabular-nums"
-        style={{ width: colWidths.due, minWidth: 80 }}
+        className="h-[56px] px-3 text-[11.5px] whitespace-nowrap border-b border-r border-border-primary align-middle font-mono tabular-nums"
+        style={{
+          width: colWidths.due,
+          minWidth: 70,
+          color: isDone
+            ? 'var(--color-success)'
+            : overdue
+              ? 'var(--color-urgent)'
+              : daysLeft <= 7
+                ? 'var(--color-high)'
+                : 'var(--color-text-secondary)',
+        }}
+        title={
+          (hasStartDate ? `${formatDate(task.startDate!)} → ` : '') +
+          formatDate(task.due) +
+          (isDone ? ' · Completed' : overdue ? ` · ${Math.abs(daysLeft)}d late` : ` · ${daysLeft}d left`)
+        }
       >
-        <div className="flex flex-col">
-          {hasStartDate && <span className="text-[10px] text-text-muted">{formatDate(task.startDate!)} →</span>}
-          <span>{formatDate(task.due)}</span>
-          <span
-            className="text-[10px]"
-            style={{
-              color: isDone ? '#238636' : overdue ? '#f85149' : daysLeft <= 14 ? '#ffa657' : undefined,
-            }}
-          >
-            {isDone ? 'Completed' : overdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft} days left`}
-          </span>
-        </div>
+        {formatDate(task.due)}
       </td>
 
       {/* Chart */}
-      <td className="py-2.5 relative border-b border-border-primary align-middle">
-        <div className="relative h-8 flex items-center" style={{ width: totalDays * dayWidth }}>
+      <td className="h-[56px] p-0 relative border-b border-border-primary align-middle">
+        <div className="relative h-full flex items-center" style={{ width: totalDays * dayWidth }}>
           {/* Background grid */}
           <div className="absolute inset-0 flex">
             {bgDays.map((d, i) => (
               <div
                 key={i}
-                className={`shrink-0 h-full ${d.isWeekend ? 'bg-white/[0.015]' : ''} ${d.isToday ? 'bg-accent/5' : ''}`}
-                style={{
-                  width: dayWidth,
-                  borderRight: d.isToday ? '1px dashed rgba(88,166,255,0.3)' : '1px solid rgba(33,38,45,0.3)',
-                }}
+                className={`shrink-0 h-full border-r ${d.isWeekend ? 'bg-bg-hover/30' : ''} ${d.isToday ? 'bg-accent/[0.08]' : ''} ${d.isToday ? 'border-dashed border-accent/40' : 'border-border-primary/30'}`}
+                style={{ width: dayWidth }}
               />
             ))}
           </div>
@@ -541,7 +508,7 @@ export default function GanttRow({
           {/* Ghost bar — baseline (original plan) overlay, rendered above main bar */}
           {baselineBar && (
             <div
-              className="absolute h-[26px] rounded-md top-[3px] z-[3] border-2 border-dashed border-amber-400/60 pointer-events-none"
+              className="absolute h-[28px] rounded-md top-1/2 -translate-y-1/2 z-[3] border-2 border-dashed border-amber-400/60 pointer-events-none"
               style={{
                 left: baselineBar.left,
                 width: baselineBar.width,
@@ -556,19 +523,19 @@ export default function GanttRow({
           {/* Main bar */}
           <div
             data-task-bar={task.id}
-            className={`gantt-bar absolute h-[26px] rounded-md top-[3px] flex items-center ${barIsNarrow ? 'justify-center' : 'justify-end pr-2'} text-[10px] font-semibold text-white/70 z-[2] min-w-[20px] transition-[filter,transform] duration-150 hover:brightness-120 hover:scale-y-110 ${isDone ? 'bar-done' : overdue ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none !transform-none opacity-80' : ''} ${isConnecting ? 'ring-2 ring-accent/40 ring-offset-1 ring-offset-transparent' : ''} ${onReschedule || onRescheduleStart ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
+            className={`gantt-bar absolute h-[28px] rounded-md top-1/2 -translate-y-1/2 flex items-center ${barIsNarrow ? 'justify-center' : 'justify-start pl-2.5'} text-[10.5px] font-bold text-white/95 z-[2] min-w-[20px] transition-[filter,box-shadow] duration-150 hover:brightness-115 ${isDone ? 'bar-done' : overdue ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none opacity-80' : ''} ${isConnecting ? 'ring-2 ring-accent/40 ring-offset-1 ring-offset-transparent' : ''} ${onReschedule || onRescheduleStart ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
             style={{
               left: 0,
               width: displayBarWidth,
               background: isDone
-                ? 'linear-gradient(135deg, #1a7f37, #2ea043)'
+                ? 'linear-gradient(135deg, #15803d, #22c55e)'
                 : overdue
-                  ? 'linear-gradient(135deg, #da3633, #f85149)'
+                  ? 'linear-gradient(135deg, #b91c1c, #ef4444)'
                   : barGradients[pCls],
               boxShadow: isDone
-                ? '0 2px 8px rgba(35,134,54,0.3)'
+                ? '0 2px 8px rgba(34,197,94,0.3)'
                 : overdue
-                  ? '0 2px 12px rgba(248,81,73,0.4)'
+                  ? '0 2px 12px rgba(239,68,68,0.4)'
                   : barShadows[pCls],
               overflow: 'hidden',
             }}
@@ -591,8 +558,15 @@ export default function GanttRow({
                 style={{ width: progressWidth }}
               />
             )}
-            {/* Label inside bar only when there's enough room */}
-            {!barIsNarrow && <span className="relative z-[1] whitespace-nowrap">{barLabel}</span>}
+            {/* Label inside bar — status at rest, drag feedback when dragging */}
+            {!barIsNarrow && (
+              <span
+                className="relative z-[1] whitespace-nowrap tracking-[0.01em]"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+              >
+                {isAnyDrag ? barLabel : isDone ? '✓ Done' : task.status}
+              </span>
+            )}
 
             {onReschedule && (
               <div
@@ -607,10 +581,9 @@ export default function GanttRow({
           {/* Connection dot — outside bar div to avoid overflow:hidden clipping */}
           {onConnectStart && !isDone && (
             <div
-              className="absolute w-[12px] h-[12px] rounded-full bg-accent border-2 border-bg-card opacity-0 group-hover/bar:opacity-100 cursor-crosshair z-[5] transition-opacity hover:scale-125"
+              className="absolute w-[12px] h-[12px] rounded-full bg-accent border-2 border-bg-card opacity-0 group-hover/bar:opacity-100 cursor-crosshair z-[5] transition-opacity hover:scale-125 top-1/2 -translate-y-1/2"
               style={{
                 left: displayBarWidth + 4,
-                top: 3 + 13 - 6,
               }}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -626,10 +599,10 @@ export default function GanttRow({
           {/* Floating label for narrow bars — positioned to the right of the bar */}
           {barIsNarrow && !isAnyDrag && (
             <span
-              className="absolute top-[6px] z-[3] text-[10px] font-semibold whitespace-nowrap pointer-events-none"
+              className="absolute top-1/2 -translate-y-1/2 z-[3] text-[10px] font-semibold whitespace-nowrap pointer-events-none"
               style={{
                 left: displayBarLeft + displayBarWidth + 6,
-                color: overdue ? '#f85149' : 'var(--color-text-muted)',
+                color: overdue ? 'var(--color-urgent)' : 'var(--color-text-muted)',
               }}
             >
               {barLabel}

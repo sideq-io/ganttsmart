@@ -1,11 +1,11 @@
 import { memo } from 'react';
 
 const items = [
-  { label: 'Urgent', bg: 'linear-gradient(135deg, #da3633, #f85149)' },
-  { label: 'High', bg: 'linear-gradient(135deg, #d47519, #ffa657)' },
-  { label: 'Medium', bg: 'linear-gradient(135deg, #9e6a03, #d2992a)' },
-  { label: 'Low', bg: 'linear-gradient(135deg, #484f58, #8b949e)' },
-  { label: 'Done', bg: 'linear-gradient(135deg, #1a7f37, #2ea043)' },
+  { label: 'Urgent', bg: 'linear-gradient(135deg, #b91c1c, #ef4444)' },
+  { label: 'High', bg: 'linear-gradient(135deg, #c2410c, #f97316)' },
+  { label: 'Medium', bg: 'linear-gradient(135deg, #b45309, #f59e0b)' },
+  { label: 'Low', bg: 'linear-gradient(135deg, #15803d, #22c55e)' },
+  { label: 'None', bg: 'linear-gradient(135deg, #52525b, #a1a1aa)' },
 ];
 
 export default memo(function Legend() {
@@ -21,8 +21,8 @@ export default memo(function Legend() {
         <div
           className="w-5 h-2 rounded-full"
           style={{
-            background: 'rgba(88,166,255,0.3)',
-            border: '1px dashed #58a6ff',
+            background: 'rgba(124,92,252,0.3)',
+            border: '1px dashed #7c5cfc',
           }}
         />
         Today

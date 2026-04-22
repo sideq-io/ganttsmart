@@ -82,8 +82,8 @@ export default function DetailPanel() {
   const daysLeft = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
   const overdue = daysLeft < 0;
   const desc = task.description ? stripMarkdown(task.description) : '';
-  const statusDotColor = statusDotColors[task.statusType] || '#484f58';
-  const priorityColor = priorityColors[task.priority] || '#484f58';
+  const statusDotColor = statusDotColors[task.statusType] || '#52525b';
+  const priorityColor = priorityColors[task.priority] || '#52525b';
 
   return (
     <>
@@ -216,7 +216,7 @@ export default function DetailPanel() {
                 <span className="text-xs text-text-muted">Due Date</span>
                 <span
                   className="text-xs font-medium tabular-nums"
-                  style={{ color: overdue ? '#f85149' : daysLeft <= 7 ? '#ffa657' : undefined }}
+                  style={{ color: overdue ? 'var(--color-urgent)' : daysLeft <= 7 ? 'var(--color-high)' : undefined }}
                 >
                   {formatDateShort(task.due)}
                   <span className="ml-1.5 text-[11px]">
@@ -245,7 +245,7 @@ export default function DetailPanel() {
                   {startDrift !== null && startDrift !== 0 && (
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-text-muted">Start</span>
-                      <span style={{ color: startDrift > 0 ? '#f0883e' : '#58a6ff' }}>
+                      <span style={{ color: startDrift > 0 ? 'var(--color-high)' : 'var(--color-accent)' }}>
                         {formatDateShort(bl.planned_start!)} → {formatDateShort(task.startDate!)}
                         <span className="ml-1 font-semibold">({startDrift > 0 ? '+' : ''}{startDrift}d)</span>
                       </span>
@@ -254,7 +254,7 @@ export default function DetailPanel() {
                   {dueDrift !== 0 && (
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-text-muted">Due</span>
-                      <span style={{ color: dueDrift > 0 ? '#f0883e' : '#58a6ff' }}>
+                      <span style={{ color: dueDrift > 0 ? 'var(--color-high)' : 'var(--color-accent)' }}>
                         {formatDateShort(bl.planned_due)} → {formatDateShort(task.due)}
                         <span className="ml-1 font-semibold">({dueDrift > 0 ? '+' : ''}{dueDrift}d)</span>
                       </span>
@@ -280,7 +280,7 @@ export default function DetailPanel() {
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${task.progress}%`,
-                      background: task.progress === 100 ? '#238636' : 'var(--color-accent)',
+                      background: task.progress === 100 ? 'var(--color-success)' : 'var(--color-accent)',
                     }}
                   />
                 </div>

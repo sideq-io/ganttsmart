@@ -3,18 +3,15 @@ import AuthPage from '@/components/AuthPage';
 import FilterBar from '@/components/FilterBar';
 import GanttChart from '@/components/GanttChart';
 import Header from '@/components/Header';
-import Legend from '@/components/Legend';
 import LinearConnect from '@/components/LinearConnect';
 import Onboarding from '@/components/Onboarding';
 import StatsRow from '@/components/StatsRow';
 import ToastContainer from '@/components/Toast';
-import Toolbar from '@/components/Toolbar';
 import DetailPanel, { setRemoveRelationHandler, setBaselinesForPanel } from '@/components/DetailPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useLinearData } from '@/hooks/useLinearData';
 import { usePlanningHistory } from '@/hooks/usePlanningHistory';
 import { useTheme } from '@/hooks/useTheme';
-import { formatDate } from '@/utils/date';
 
 function GanttView({
   linearToken,
@@ -132,25 +129,12 @@ function GanttView({
     localStorage.setItem('gantt_onboarding_done', '1');
   };
 
-  const title = projectName ? `${projectName} Roadmap` : 'GanttSmart';
-
-  let subtitle = 'Loading...';
-  if (!loading && filteredTasks.length > 0) {
-    subtitle = `${filteredTasks.length} active tasks \u00B7 ${formatDate(filteredTasks[0].due)} \u2013 ${formatDate(filteredTasks[filteredTasks.length - 1].due)}`;
-  } else if (!loading && tasks.length > 0) {
-    subtitle = `${tasks.length} tasks total \u00B7 0 matching filters`;
-  } else if (!loading && !error) {
-    subtitle = 'No tasks with due dates';
-  } else if (error) {
-    subtitle = 'Error loading data';
-  }
-
   return (
-    <div className="p-4 sm:p-6 lg:p-10 print:p-4">
+    <div className="h-screen flex flex-col bg-bg-primary overflow-hidden print:h-auto print:block print:overflow-visible">
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
 
-      <Header title={title} subtitle={subtitle} />
-      <Toolbar
+      <Header
+        projectName={projectName}
         loading={loading}
         lastSynced={lastSynced}
         onRefresh={refresh}
@@ -162,7 +146,7 @@ function GanttView({
         theme={theme}
         onThemeChange={setTheme}
         projectId={selectedProjectId}
-        projectName={projectName}
+        tasks={filteredTasks}
       />
 
       <FilterBar
@@ -180,23 +164,26 @@ function GanttView({
       />
 
       <StatsRow tasks={filteredTasks} />
-      <Legend />
-      <GanttChart
-        tasks={filteredTasks}
-        doneTasks={doneTasks}
-        milestones={milestones}
-        loading={loading}
-        error={error}
-        dayWidth={dayWidth}
-        groupBy={groupBy}
-        onReschedule={rescheduleWithHistory}
-        onRescheduleStart={rescheduleStartWithHistory}
-        onCycleStatus={cycleStatusWithHistory}
-        onCreateRelation={createRelation}
-        baselines={baselines}
-        dateFrom={filters.dateFrom}
-        dateTo={filters.dateTo}
-      />
+
+      <div className="flex-1 min-h-0 overflow-hidden print:overflow-visible">
+        <GanttChart
+          tasks={filteredTasks}
+          doneTasks={doneTasks}
+          milestones={milestones}
+          loading={loading}
+          error={error}
+          dayWidth={dayWidth}
+          groupBy={groupBy}
+          onReschedule={rescheduleWithHistory}
+          onRescheduleStart={rescheduleStartWithHistory}
+          onCycleStatus={cycleStatusWithHistory}
+          onCreateRelation={createRelation}
+          baselines={baselines}
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+        />
+      </div>
+
       <DetailPanel />
       <ToastContainer />
     </div>
