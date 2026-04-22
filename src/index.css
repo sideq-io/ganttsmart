@@ -1,65 +1,70 @@
 @import "tailwindcss";
 
-/* ---- Dark theme (default) ---- */
+/* ---- Dark theme (default) — Zinc + Purple ---- */
 @theme {
-  --color-bg-primary: #0f1117;
-  --color-bg-card: #161b22;
-  --color-bg-header: #1c2129;
-  --color-bg-hover: #21262d;
-  --color-border-primary: #21262d;
-  --color-border-secondary: #30363d;
-  --color-text-primary: #e1e4e8;
-  --color-text-secondary: #8b949e;
-  --color-text-muted: #484f58;
-  --color-accent: #58a6ff;
-  --color-urgent: #f85149;
-  --color-urgent-dark: #da3633;
-  --color-high: #ffa657;
-  --color-high-dark: #d47519;
-  --color-medium: #d2992a;
-  --color-medium-dark: #9e6a03;
-  --color-low: #8b949e;
-  --color-low-dark: #484f58;
-  --color-none: #484f58;
-  --color-none-dark: #30363d;
-  --color-success: #238636;
-  --color-success-hover: #2ea043;
+  --color-bg-primary: #09090b;
+  --color-bg-card: #111113;
+  --color-bg-header: #1c1c1f;
+  --color-bg-hover: #27272a;
+  --color-border-primary: #27272a;
+  --color-border-secondary: #3f3f46;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #52525b;
+  --color-accent: #7c5cfc;
+  --color-accent-light: #9d84fd;
+  --color-urgent: #ef4444;
+  --color-urgent-dark: #b91c1c;
+  --color-high: #f97316;
+  --color-high-dark: #c2410c;
+  --color-medium: #f59e0b;
+  --color-medium-dark: #b45309;
+  --color-low: #22c55e;
+  --color-low-dark: #15803d;
+  --color-none: #a1a1aa;
+  --color-none-dark: #52525b;
+  --color-success: #22c55e;
+  --color-success-hover: #16a34a;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 /* ---- Light theme overrides ---- */
 html.light {
-  --color-bg-primary: #f6f8fa;
+  --color-bg-primary: #f4f4f5;
   --color-bg-card: #ffffff;
-  --color-bg-header: #f0f3f6;
-  --color-bg-hover: #e8ecf0;
-  --color-border-primary: #d0d7de;
-  --color-border-secondary: #c0c8d0;
-  --color-text-primary: #1f2328;
-  --color-text-secondary: #59636e;
-  --color-text-muted: #8c959f;
-  --color-accent: #0969da;
-  --color-urgent: #cf222e;
-  --color-urgent-dark: #a40e26;
-  --color-high: #bf5614;
-  --color-high-dark: #953800;
-  --color-medium: #9a6700;
-  --color-medium-dark: #7d5200;
-  --color-low: #59636e;
-  --color-low-dark: #424a53;
-  --color-none: #8c959f;
-  --color-none-dark: #6e7781;
-  --color-success: #1a7f37;
-  --color-success-hover: #218b3e;
+  --color-bg-header: #fafafa;
+  --color-bg-hover: #e4e4e7;
+  --color-border-primary: #e4e4e7;
+  --color-border-secondary: #d4d4d8;
+  --color-text-primary: #09090b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #a1a1aa;
+  --color-accent: #7c5cfc;
+  --color-accent-light: #9d84fd;
+  --color-urgent: #dc2626;
+  --color-urgent-dark: #991b1b;
+  --color-high: #ea580c;
+  --color-high-dark: #9a3412;
+  --color-medium: #d97706;
+  --color-medium-dark: #92400e;
+  --color-low: #16a34a;
+  --color-low-dark: #14532d;
+  --color-none: #71717a;
+  --color-none-dark: #52525b;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   min-height: 100vh;
   margin: 0;
   transition: background-color 0.2s ease, color 0.2s ease;
   scrollbar-gutter: stable;
+  letter-spacing: -0.005em;
 }
 
 /* Focus accessibility */
@@ -71,6 +76,11 @@ body {
 /* Default transitions on interactive elements */
 button, select, input, a {
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+/* Mono utility class */
+.font-mono {
+  font-family: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 /* Tabular nums for date alignment */
@@ -87,23 +97,57 @@ button, select, input, a {
   animation: pulse-bar 2s ease-in-out infinite;
 }
 
-/* Scrollbar — consolidated using CSS variables */
-::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-track { background: var(--color-bg-card); }
-::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 4px; }
+/* Scrollbar — thinner, more refined */
+::-webkit-scrollbar { height: 6px; width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
-/* Light theme gradient overrides for Gantt bars */
-html.light .gantt-bar.bar-urgent { background: linear-gradient(135deg, #a40e26, #cf222e); }
-html.light .gantt-bar.bar-high { background: linear-gradient(135deg, #953800, #bf5614); }
-html.light .gantt-bar.bar-medium { background: linear-gradient(135deg, #7d5200, #9a6700); }
-html.light .gantt-bar.bar-low { background: linear-gradient(135deg, #424a53, #59636e); }
-html.light .gantt-bar.bar-none { background: linear-gradient(135deg, #6e7781, #8c959f); }
-html.light .gantt-bar.bar-overdue { background: linear-gradient(135deg, #a40e26, #cf222e); }
-html.light .gantt-bar.bar-done { background: linear-gradient(135deg, #1a7f37, #218b3e); }
+/* Gantt bar gradients — subtle shimmer via pseudo-element */
+.gantt-bar {
+  position: relative;
+  overflow: hidden;
+}
+.gantt-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: rgba(255,255,255,0.12);
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+}
+.gantt-bar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 0 6px 6px 0;
+  pointer-events: none;
+}
 
-/* Light theme - semi-transparent adjustments */
-html.light .gantt-bar { color: rgba(255,255,255,0.9); }
+/* Priority-specific bar backgrounds */
+.gantt-bar.bar-urgent { background: #ef4444; }
+.gantt-bar.bar-high { background: #f97316; }
+.gantt-bar.bar-medium { background: #f59e0b; }
+.gantt-bar.bar-low { background: #22c55e; }
+.gantt-bar.bar-none { background: #a1a1aa; }
+.gantt-bar.bar-overdue { background: #ef4444; }
+.gantt-bar.bar-done { background: #22c55e; }
+
+html.light .gantt-bar.bar-urgent { background: #dc2626; }
+html.light .gantt-bar.bar-high { background: #ea580c; }
+html.light .gantt-bar.bar-medium { background: #d97706; }
+html.light .gantt-bar.bar-low { background: #16a34a; }
+html.light .gantt-bar.bar-none { background: #71717a; }
+html.light .gantt-bar.bar-overdue { background: #dc2626; }
+html.light .gantt-bar.bar-done { background: #16a34a; }
+html.light .gantt-bar::before { background: rgba(255,255,255,0.22); }
 
 /* Focus-visible for keyboard accessibility */
 tr:focus-visible {

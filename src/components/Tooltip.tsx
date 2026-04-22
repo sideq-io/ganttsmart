@@ -50,8 +50,8 @@ export default function Tooltip() {
   const daysLeft = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
   const overdue = daysLeft < 0;
   const desc = task.description ? stripMarkdown(task.description) : '';
-  const statusDotColor = statusDotColors[task.statusType] || '#484f58';
-  const priorityColor = priorityColors[task.priority] || '#484f58';
+  const statusDotColor = statusDotColors[task.statusType] || '#52525b';
+  const priorityColor = priorityColors[task.priority] || '#52525b';
 
   // Position
   let left = x + 16;
@@ -121,7 +121,7 @@ export default function Tooltip() {
           <div className="text-[11px] font-medium text-text-secondary tabular-nums">
             {task.startDate && <span className="text-text-muted">{formatDate(task.startDate)} → </span>}
             {formatDate(task.due)}
-            <span className="ml-1" style={{ color: overdue ? '#f85149' : daysLeft <= 14 ? '#ffa657' : undefined }}>
+            <span className="ml-1" style={{ color: overdue ? 'var(--color-urgent)' : daysLeft <= 14 ? 'var(--color-high)' : undefined }}>
               ({overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`})
             </span>
           </div>

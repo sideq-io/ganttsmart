@@ -20,7 +20,7 @@ async function captureAsDataUrl(element: HTMLElement): Promise<string> {
       pixelRatio: 2,
       width: element.scrollWidth,
       height: element.scrollHeight,
-      backgroundColor: getComputedStyle(element).backgroundColor || '#161b22',
+      backgroundColor: getComputedStyle(element).backgroundColor || '#09090b',
     });
     return dataUrl;
   } finally {

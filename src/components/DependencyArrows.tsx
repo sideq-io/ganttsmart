@@ -20,7 +20,7 @@ interface Arrow {
 function ArrowPath({ arrow: a }: { arrow: Arrow }) {
   const dx = a.toX - a.fromX;
   const dy = a.toY - a.fromY;
-  const color = a.violated ? '#f0883e' : '#f85149'; // amber for violated, red for normal
+  const color = a.violated ? '#f97316' : '#ef4444'; // amber for violated, red for normal
   const markerId = a.violated ? 'dep-arrow-warn' : 'dep-arrow';
 
   let path: string;
@@ -122,10 +122,10 @@ export default memo(function DependencyArrows({ tasks, containerRef, depViolatio
     >
       <defs>
         <marker id="dep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#f85149" opacity="0.8" />
+          <polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.8" />
         </marker>
         <marker id="dep-arrow-warn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#f0883e" opacity="0.9" />
+          <polygon points="0 0, 8 3, 0 6" fill="#f97316" opacity="0.9" />
         </marker>
       </defs>
       {arrows.map((a) => (
