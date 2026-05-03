@@ -485,10 +485,15 @@ export default function GanttRow({
         title={
           (hasStartDate ? `${formatDate(task.startDate!)} → ` : '') +
           formatDate(task.due) +
+          (task.isDueImplicit ? ' (from project target)' : '') +
           (isDone ? ' · Completed' : overdue ? ` · ${Math.abs(daysLeft)}d late` : ` · ${daysLeft}d left`)
         }
       >
-        {formatDate(task.due)}
+        {task.isDueImplicit ? (
+          <span className="italic opacity-75">~{formatDate(task.due)}</span>
+        ) : (
+          formatDate(task.due)
+        )}
       </td>
 
       {/* Chart */}
@@ -523,7 +528,7 @@ export default function GanttRow({
           {/* Main bar */}
           <div
             data-task-bar={task.id}
-            className={`gantt-bar absolute h-[28px] rounded-md top-1/2 -translate-y-1/2 flex items-center ${barIsNarrow ? 'justify-center' : 'justify-start pl-2.5'} text-[10.5px] font-bold text-white/95 z-[2] min-w-[20px] transition-[filter,box-shadow] duration-150 hover:brightness-115 ${isDone ? 'bar-done' : overdue ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none opacity-80' : ''} ${isConnecting ? 'ring-2 ring-accent/40 ring-offset-1 ring-offset-transparent' : ''} ${onReschedule || onRescheduleStart ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
+            className={`gantt-bar absolute h-[28px] rounded-md top-1/2 -translate-y-1/2 flex items-center ${barIsNarrow ? 'justify-center' : 'justify-start pl-2.5'} text-[10.5px] font-bold text-white/95 z-[2] min-w-[20px] transition-[filter,box-shadow] duration-150 hover:brightness-115 ${isDone ? 'bar-done' : overdue ? 'bar-overdue animate-pulse-bar' : `bar-${pCls}`} ${isAnyDrag ? '!transition-none opacity-80' : ''} ${isConnecting ? 'ring-2 ring-accent/40 ring-offset-1 ring-offset-transparent' : ''} ${task.isDueImplicit ? 'opacity-75' : ''} ${onReschedule || onRescheduleStart ? (isMoving ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
             style={{
               left: 0,
               width: displayBarWidth,
@@ -538,6 +543,8 @@ export default function GanttRow({
                   ? '0 2px 12px rgba(239,68,68,0.4)'
                   : barShadows[pCls],
               overflow: 'hidden',
+              outline: task.isDueImplicit ? '1.5px dashed rgba(255,255,255,0.45)' : undefined,
+              outlineOffset: task.isDueImplicit ? '-3px' : undefined,
             }}
             onClick={() => {
               if (!didDragRef.current) openDetailPanel(task);

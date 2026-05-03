@@ -9,6 +9,7 @@ import GanttRow from './GanttRow';
 interface Props {
   tasks: Task[];
   doneTasks?: Task[];
+  unscheduledTasks?: Task[];
   milestones: Milestone[];
   loading: boolean;
   error: string;
@@ -86,6 +87,7 @@ function ResizeHandle({onResize}: { onResize: (delta: number) => void }) {
 export default function GanttChart({
                                      tasks,
                                      doneTasks = [],
+                                     unscheduledTasks = [],
                                      milestones,
                                      loading,
                                      error,
@@ -101,6 +103,7 @@ export default function GanttChart({
                                    }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [doneVisible, setDoneVisible] = useState(false);
+  const [unscheduledVisible, setUnscheduledVisible] = useState(true);
   const [colWidths, setColWidths] = useState<ColumnWidths>(DEFAULT_WIDTHS);
   const ganttRef = useRef<HTMLDivElement>(null);
   const baseWidthsRef = useRef<ColumnWidths>(DEFAULT_WIDTHS);
@@ -414,7 +417,7 @@ export default function GanttChart({
     );
   }
 
-  if (!tasks.length) {
+  if (!tasks.length && !unscheduledTasks.length) {
     return (
       <div className="h-full w-full bg-bg-primary overflow-auto flex items-center justify-center">
         <div className="text-center py-16 px-6">
@@ -437,17 +440,38 @@ export default function GanttChart({
           </div>
           <h3 className="text-base font-semibold text-text-primary mb-2">No tasks to display</h3>
           <p className="text-sm text-text-secondary max-w-sm mx-auto mb-4">
-            This could mean your current filters don't match any tasks, or the selected project has no issues with due
-            dates.
+            This could mean your current filters don't match any tasks, or the selected project has no issues yet.
           </p>
           <div className="flex items-center justify-center gap-4 text-xs text-text-muted">
             <span>Try:</span>
             <span className="px-2 py-1 bg-bg-hover rounded-md border border-border-primary">Clear filters</span>
-            <span className="px-2 py-1 bg-bg-hover rounded-md border border-border-primary">
-              Add due dates in Linear
-            </span>
             <span className="px-2 py-1 bg-bg-hover rounded-md border border-border-primary">Switch project</span>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No scheduled tasks but some unscheduled — show a hint banner + the unscheduled list
+  if (!tasks.length && unscheduledTasks.length > 0) {
+    return (
+      <div className="h-full w-full bg-bg-primary overflow-auto">
+        <div className="max-w-2xl mx-auto py-12 px-6">
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-2">No issues with dates yet</h3>
+            <p className="text-sm text-text-secondary max-w-md mx-auto">
+              {unscheduledTasks.length} {unscheduledTasks.length === 1 ? 'issue' : 'issues'} need a due date — or add a target date to the project in Linear, and they'll all line up against it.
+            </p>
+          </div>
+          <UnscheduledList tasks={unscheduledTasks} onReschedule={onReschedule} expanded />
         </div>
       </div>
     );
@@ -637,6 +661,142 @@ export default function GanttChart({
           )}
         </div>
       )}
+
+      {/* Unscheduled tasks section */}
+      {unscheduledTasks.length > 0 && (
+        <div className="border-t border-border-primary print:hidden">
+          <button
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-text-secondary hover:bg-bg-hover transition-colors"
+            onClick={() => setUnscheduledVisible((v) => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-text-muted shrink-0 transition-transform duration-200"
+                style={{transform: unscheduledVisible ? 'rotate(90deg)' : 'rotate(0deg)'}}
+              >
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-high">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span className="font-medium">Unscheduled</span>
+              <span className="text-xs text-text-muted bg-bg-hover rounded-full px-2 py-0.5">{unscheduledTasks.length}</span>
+              <span className="text-[11px] text-text-muted ml-1">— no due date set</span>
+            </div>
+            <span className="text-xs text-text-muted">{unscheduledVisible ? 'Hide' : 'Show'}</span>
+          </button>
+
+          {unscheduledVisible && (
+            <div className="px-4 pb-4">
+              <UnscheduledList tasks={unscheduledTasks} onReschedule={onReschedule} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Inline list component for unscheduled tasks. Each row offers quick scheduling. */
+function UnscheduledList({
+  tasks,
+  onReschedule,
+  expanded,
+}: {
+  tasks: Task[];
+  onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
+  expanded?: boolean;
+}) {
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+
+  return (
+    <div className={`grid gap-2 ${expanded ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+      {tasks.map((task) => (
+        <UnscheduledRow key={task.uuid} task={task} todayStr={todayStr} onReschedule={onReschedule} />
+      ))}
+    </div>
+  );
+}
+
+function UnscheduledRow({
+  task,
+  todayStr,
+  onReschedule,
+}: {
+  task: Task;
+  todayStr: string;
+  onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
+}) {
+  const [date, setDate] = useState(todayStr);
+  const [busy, setBusy] = useState(false);
+
+  const priorityCls = task.priorityVal === 1 ? 'urgent' : task.priorityVal === 2 ? 'high' : task.priorityVal === 3 ? 'medium' : task.priorityVal === 4 ? 'low' : 'none';
+  const idColorMap: Record<string, string> = {
+    urgent: '#ef4444', high: '#f97316', medium: '#f59e0b', low: '#22c55e', none: '#a1a1aa',
+  };
+  const idColor = idColorMap[priorityCls];
+
+  const schedule = useCallback(async (newDate: string) => {
+    if (!onReschedule || busy) return;
+    setBusy(true);
+    try {
+      await onReschedule(task.uuid, newDate);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, onReschedule, task.uuid]);
+
+  return (
+    <div className="flex items-center gap-3 bg-bg-card border border-border-primary rounded-lg p-2.5 hover:border-border-secondary transition-colors">
+      <Avatar name={task.assignee} size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span
+            className="font-mono text-[10px] tracking-[0.03em] shrink-0 px-1.5 py-0.5 rounded bg-bg-hover"
+            style={{ color: idColor }}
+          >
+            {task.id}
+          </span>
+          <span
+            className="text-[9.5px] font-semibold uppercase tracking-wide"
+            style={{ color: idColor }}
+          >
+            {task.priority}
+          </span>
+          <span className="text-[10px] text-text-muted ml-auto">{task.status}</span>
+        </div>
+        <div className="text-[12.5px] font-medium text-text-primary leading-snug truncate">{task.title}</div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          disabled={busy || !onReschedule}
+          className="bg-bg-primary border border-border-primary rounded-md text-text-primary text-xs px-2 py-1 outline-none hover:border-border-secondary focus:border-accent disabled:opacity-50"
+        />
+        <button
+          onClick={() => schedule(date)}
+          disabled={busy || !onReschedule || !date}
+          className="px-2.5 py-1 rounded-md bg-accent text-white text-xs font-medium hover:bg-accent-light transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Set due date"
+        >
+          {busy ? '…' : 'Schedule'}
+        </button>
+      </div>
     </div>
   );
 }

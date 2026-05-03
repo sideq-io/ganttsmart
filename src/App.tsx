@@ -33,6 +33,7 @@ function GanttView({
     projectName,
     tasks,
     doneTasks,
+    unscheduledTasks,
     filteredTasks,
     milestones,
     assignees,
@@ -169,6 +170,7 @@ function GanttView({
         <GanttChart
           tasks={filteredTasks}
           doneTasks={doneTasks}
+          unscheduledTasks={unscheduledTasks}
           milestones={milestones}
           loading={loading}
           error={error}

@@ -158,12 +158,20 @@ function parseStartDate(description: string): string | null {
 export async function fetchIssues(
   apiKey: string,
   projectId: string,
-): Promise<{ projectName: string; tasks: Task[]; doneTasks: Task[]; milestones: Milestone[] }> {
+): Promise<{
+  projectName: string;
+  tasks: Task[];
+  doneTasks: Task[];
+  unscheduledTasks: Task[];
+  milestones: Milestone[];
+}> {
   const data = await gql(
     apiKey,
     `query($id: String!) {
       project(id: $id) {
         name
+        startDate
+        targetDate
         projectMilestones {
           nodes {
             id
@@ -225,6 +233,8 @@ export async function fetchIssues(
 
   const project = data.project as {
     name: string;
+    startDate: string | null;
+    targetDate: string | null;
     projectMilestones: { nodes: Array<{ id: string; name: string; targetDate: string | null }> };
     issues: { nodes: IssueNode[] };
     doneIssues: { nodes: IssueNode[] };
@@ -234,9 +244,19 @@ export async function fetchIssues(
 
   const issueNodes = project.issues.nodes;
   const doneIssueNodes = project.doneIssues?.nodes || [];
+  const projectTargetDate = project.targetDate;
 
-  // Query 2: fetch relations and children using issue UUIDs
-  const issueIds = issueNodes.filter((n) => n.dueDate).map((n) => n.id);
+  // Effective due date: explicit dueDate, falling back to project's targetDate.
+  // Returns { date, isImplicit } or null if no date can be derived at all.
+  function effectiveDue(n: IssueNode): { date: string; isImplicit: boolean } | null {
+    if (n.dueDate) return { date: n.dueDate, isImplicit: false };
+    if (projectTargetDate) return { date: projectTargetDate, isImplicit: true };
+    return null;
+  }
+
+  // Query 2: fetch relations and children for ALL active issues (scheduled + unscheduled).
+  // We want relation/child counts on every issue so the unscheduled list shows them too.
+  const issueIds = issueNodes.map((n) => n.id);
 
   const relationsMap: Record<string, { blocks: string[]; blockedBy: string[] }> = {};
   const childrenMap: Record<string, { total: number; completed: number }> = {};
@@ -308,7 +328,7 @@ export async function fetchIssues(
     }
   }
 
-  function mapNode(n: IssueNode): Task {
+  function mapNode(n: IssueNode, due: string, isDueImplicit: boolean): Task {
     const rel = relationsMap[n.identifier] || { blocks: [], blockedBy: [] };
     const ch = childrenMap[n.identifier] || { total: 0, completed: 0 };
     const progress = ch.total > 0 ? Math.round((ch.completed / ch.total) * 100) : 0;
@@ -318,7 +338,7 @@ export async function fetchIssues(
       uuid: n.id,
       title: n.title,
       description: n.description || '',
-      due: n.dueDate!,
+      due,
       startDate: parseStartDate(n.description || ''),
       url: n.url,
       priorityVal: n.priority,
@@ -333,17 +353,38 @@ export async function fetchIssues(
       totalChildren: ch.total,
       completedChildren: ch.completed,
       completedAt: n.completedAt || undefined,
+      isDueImplicit: isDueImplicit || undefined,
     };
   }
 
-  const tasks: Task[] = issueNodes
-    .filter((n) => n.dueDate)
-    .map(mapNode)
-    .sort((a, b) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime());
+  // Active issues: split into scheduled (have a due date or fallback) and unscheduled (no date at all).
+  const tasks: Task[] = [];
+  const unscheduledTasks: Task[] = [];
+  for (const n of issueNodes) {
+    const eff = effectiveDue(n);
+    if (eff) {
+      tasks.push(mapNode(n, eff.date, eff.isImplicit));
+    } else {
+      // No date — show as unscheduled with a placeholder due date (today) so consumers
+      // that need `due` can render. UI treats these specially via isDueImplicit.
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      unscheduledTasks.push(mapNode(n, todayStr, true));
+    }
+  }
+  tasks.sort(
+    (a, b) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime(),
+  );
+  unscheduledTasks.sort(
+    (a, b) => a.priorityVal - b.priorityVal || a.id.localeCompare(b.id),
+  );
 
   const doneTasks: Task[] = doneIssueNodes
-    .filter((n) => n.dueDate)
-    .map(mapNode)
+    .filter((n) => n.dueDate || projectTargetDate)
+    .map((n) => {
+      const eff = effectiveDue(n)!;
+      return mapNode(n, eff.date, eff.isImplicit);
+    })
     .sort((a, b) => {
       const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
       const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
@@ -356,7 +397,7 @@ export async function fetchIssues(
     targetDate: m.targetDate,
   }));
 
-  return { projectName: project.name, tasks, doneTasks, milestones };
+  return { projectName: project.name, tasks, doneTasks, unscheduledTasks, milestones };
 }
 
 // ---- Mutations (with debouncing for drag operations) ----

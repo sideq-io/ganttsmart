@@ -25,6 +25,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
   const [projectName, setProjectName] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [doneTasks, setDoneTasks] = useState<Task[]>([]);
+  const [unscheduledTasks, setUnscheduledTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [workflowStates, setWorkflowStates] = useState<WorkflowState[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +107,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
         const result = await fetchIssues(linearToken, projectId);
         setTasks(result.tasks);
         setDoneTasks(result.doneTasks);
+        setUnscheduledTasks(result.unscheduledTasks);
         setProjectName(result.projectName);
         setMilestones(result.milestones);
         setLastSynced(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
@@ -128,12 +130,14 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
         const result = await fetchIssues(linearToken, projectId);
         setTasks(result.tasks);
         setDoneTasks(result.doneTasks);
+        setUnscheduledTasks(result.unscheduledTasks);
         setProjectName(result.projectName);
         setMilestones(result.milestones);
         setLastSynced(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
-        if (result.tasks.length > 0 && result.tasks[0].teamId) {
+        const seedTeamId = result.tasks[0]?.teamId || result.unscheduledTasks[0]?.teamId;
+        if (seedTeamId) {
           try {
-            const states = await fetchWorkflowStates(linearToken, result.tasks[0].teamId);
+            const states = await fetchWorkflowStates(linearToken, seedTeamId);
             setWorkflowStates(states);
           } catch {
             // Non-critical
@@ -144,6 +148,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
         setError(msg);
         setTasks([]);
         setDoneTasks([]);
+        setUnscheduledTasks([]);
         setMilestones([]);
         if (msg.includes('authentication expired')) {
           toastError('Linear session expired. Reconnecting...');
@@ -181,14 +186,27 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
     setDayWidth((w) => Math.max(w - 7, MIN_DAY_WIDTH));
   }, []);
 
-  // Optimistic reschedule (due date) with rollback + undo
+  // Optimistic reschedule (due date) with rollback + undo.
+  // Also handles "promoting" an unscheduled task: if the uuid lives in unscheduledTasks,
+  // we move it into tasks with the new explicit due date.
   const reschedule = useCallback(
     async (taskUuid: string, newDueDate: string) => {
       if (!linearToken) return;
 
       const prevTasks = tasks;
-      const task = tasks.find((t) => t.uuid === taskUuid);
-      setTasks((prev) => prev.map((t) => (t.uuid === taskUuid ? { ...t, due: newDueDate } : t)));
+      const prevUnscheduled = unscheduledTasks;
+      const fromUnscheduled = unscheduledTasks.find((t) => t.uuid === taskUuid);
+      const task = tasks.find((t) => t.uuid === taskUuid) || fromUnscheduled;
+
+      if (fromUnscheduled) {
+        // Promote: remove from unscheduled, add to scheduled with explicit due date
+        setUnscheduledTasks((prev) => prev.filter((t) => t.uuid !== taskUuid));
+        setTasks((prev) => [...prev, { ...fromUnscheduled, due: newDueDate, isDueImplicit: undefined }]);
+      } else {
+        setTasks((prev) =>
+          prev.map((t) => (t.uuid === taskUuid ? { ...t, due: newDueDate, isDueImplicit: undefined } : t)),
+        );
+      }
 
       pendingMutations.current++;
       try {
@@ -198,18 +216,22 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
           label: 'Undo',
           onClick: () => {
             setTasks(prevTasks);
-            if (task) updateIssueDueDate(linearToken, taskUuid, task.due).catch(() => {});
+            setUnscheduledTasks(prevUnscheduled);
+            if (task && task.due && !task.isDueImplicit) {
+              updateIssueDueDate(linearToken, taskUuid, task.due).catch(() => {});
+            }
           },
         });
       } catch (e) {
         if (e instanceof DebounceCancelled) return; // superseded by a newer drag — don't rollback
         setTasks(prevTasks);
+        setUnscheduledTasks(prevUnscheduled);
         toastError(`Failed to update due date: ${(e as Error).message}`, () => reschedule(taskUuid, newDueDate));
       } finally {
         pendingMutations.current--;
       }
     },
-    [linearToken, tasks, pushUndo],
+    [linearToken, tasks, unscheduledTasks, pushUndo],
   );
 
   // Optimistic reschedule (start date) with rollback + undo
@@ -436,6 +458,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
     projectName,
     tasks,
     doneTasks,
+    unscheduledTasks,
     filteredTasks,
     milestones,
     workflowStates,

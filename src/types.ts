@@ -18,6 +18,8 @@ export interface Task {
   totalChildren: number;
   completedChildren: number;
   completedAt?: string;
+  /** True when `due` was derived from project.targetDate (issue has no explicit due date) */
+  isDueImplicit?: boolean;
 }
 
 export interface Project {
