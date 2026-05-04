@@ -7,6 +7,7 @@ const DEFAULT_PRIORITIES = new Set([0, 1, 2, 3, 4]);
 
 export function useSharedData(shareToken: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [doneTasks, setDoneTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [projectName, setProjectName] = useState('');
   const [cachedAt, setCachedAt] = useState('');
@@ -74,6 +75,7 @@ export function useSharedData(shareToken: string) {
         setNeedsPassword(false);
         setProjectName(data.projectName);
         setTasks(data.cachedData?.tasks || []);
+        setDoneTasks(data.cachedData?.doneTasks || []);
         setMilestones(data.cachedData?.milestones || []);
         setCachedAt(data.cachedAt);
       } catch (e) {
@@ -106,6 +108,7 @@ export function useSharedData(shareToken: string) {
 
   return {
     tasks,
+    doneTasks,
     filteredTasks,
     milestones,
     projectName,

@@ -116,12 +116,38 @@ async function recordFailedAttempt(supabase: ReturnType<typeof createClient>, sh
 
 // --- GraphQL with variables (INJ-VULN-01 fix) ---
 
+// Match the main app's start-date convention: `start: DD-MM-YY` written into issue descriptions
+// by updateIssueStartDate (src/api/linear.ts). Returns YYYY-MM-DD or null.
+function parseStartDate(description: string | null | undefined): string | null {
+  if (!description) return null;
+  const match = description.match(/start:\s*(\d{2})-(\d{2})-(\d{2})/i);
+  if (!match) return null;
+  const [, dd, mm, yy] = match;
+  const year = 2000 + parseInt(yy);
+  const month = parseInt(mm);
+  const day = parseInt(dd);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 async function fetchLinearData(apiKey: string, projectId: string) {
   const query = `query($id: String!) {
     project(id: $id) {
       name
+      targetDate
       issues(first: 250, filter: { completedAt: { null: true } }) {
-        nodes { id identifier title description dueDate priority state { name type } assignee { name } }
+        nodes {
+          id identifier title description dueDate priority url completedAt
+          state { name type }
+          assignee { name }
+        }
+      }
+      doneIssues: issues(first: 100, filter: { completedAt: { null: false } }) {
+        nodes {
+          id identifier title description dueDate priority url completedAt
+          state { name type }
+          assignee { name }
+        }
       }
     }
   }`;
@@ -139,25 +165,60 @@ async function fetchLinearData(apiKey: string, projectId: string) {
   const project = result.data?.project;
   if (!project) throw new Error("Project not found");
 
+  // Effective due: explicit dueDate, falling back to project target date (parity with main app).
+  const projectTargetDate: string | null = project.targetDate || null;
+  function effectiveDue(n: any): { date: string; isImplicit: boolean } | null {
+    if (n.dueDate) return { date: n.dueDate, isImplicit: false };
+    if (projectTargetDate) return { date: projectTargetDate, isImplicit: true };
+    return null;
+  }
+
+  function mapNode(n: any, due: string, isDueImplicit: boolean) {
+    return {
+      id: n.identifier,
+      uuid: n.id,
+      title: n.title,
+      description: n.description || "",
+      due,
+      startDate: parseStartDate(n.description),
+      priorityVal: n.priority,
+      priority: PRIORITY_MAP[n.priority] || "None",
+      status: n.state?.name || "",
+      statusType: n.state?.type || "",
+      assignee: n.assignee?.name || "Unassigned",
+      url: n.url || "",
+      teamId: "",
+      blocks: [],
+      blockedBy: [],
+      progress: 0,
+      totalChildren: 0,
+      completedChildren: 0,
+      completedAt: n.completedAt || undefined,
+      isDueImplicit: isDueImplicit || undefined,
+    };
+  }
+
   const tasks = project.issues.nodes
-    .filter((n: any) => n.dueDate)
     .map((n: any) => {
-      const startMatch = n.description?.match(/\[start:\s*(\d{4}-\d{2}-\d{2})\]/);
-      return {
-        id: n.identifier, uuid: n.id, title: n.title,
-        description: n.description || "", due: n.dueDate,
-        startDate: startMatch ? startMatch[1] : null,
-        priorityVal: n.priority, priority: PRIORITY_MAP[n.priority] || "None",
-        status: n.state?.name || "", statusType: n.state?.type || "",
-        assignee: n.assignee?.name || "Unassigned",
-        url: "", teamId: "",
-        blocks: [], blockedBy: [],
-        progress: 0, totalChildren: 0, completedChildren: 0,
-      };
+      const eff = effectiveDue(n);
+      return eff ? mapNode(n, eff.date, eff.isImplicit) : null;
     })
+    .filter((t: any) => t !== null)
     .sort((a: any, b: any) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime());
 
-  return { tasks, milestones: [], projectName: project.name };
+  const doneTasks = (project.doneIssues?.nodes || [])
+    .map((n: any) => {
+      const eff = effectiveDue(n);
+      return eff ? mapNode(n, eff.date, eff.isImplicit) : null;
+    })
+    .filter((t: any) => t !== null)
+    .sort((a: any, b: any) => {
+      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  return { tasks, doneTasks, milestones: [], projectName: project.name };
 }
 
 async function getUser(req: Request) {
