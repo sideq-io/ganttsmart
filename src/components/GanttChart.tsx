@@ -19,6 +19,7 @@ interface Props {
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
   onCycleStatus?: (taskUuid: string) => Promise<void>;
   onCreateRelation?: (sourceTaskId: string, targetTaskId: string) => Promise<void>;
+  onReorder?: (draggedUuid: string, targetUuid: string, placeAfter: boolean) => void;
   baselines?: Map<string, TaskBaseline>;
   dateFrom?: string;
   dateTo?: string;
@@ -97,6 +98,7 @@ export default function GanttChart({
                                      onRescheduleStart,
                                      onCycleStatus,
                                      onCreateRelation,
+                                     onReorder,
                                      baselines,
                                      dateFrom,
                                      dateTo,
@@ -578,6 +580,7 @@ export default function GanttChart({
               isConnecting={isConnecting}
               depViolations={depViolations}
               baselines={baselines}
+              onReorder={onReorder}
             />
           ))}
           </tbody>
@@ -820,6 +823,7 @@ function GroupRows({
                      isConnecting,
                      depViolations,
                      baselines,
+                     onReorder,
                    }: {
   group: { key: string; label: string; tasks: Task[] };
   groupBy: GroupBy;
@@ -838,6 +842,7 @@ function GroupRows({
   isConnecting?: boolean;
   depViolations?: Map<string, string[]>;
   baselines?: Map<string, TaskBaseline>;
+  onReorder?: (draggedUuid: string, targetUuid: string, placeAfter: boolean) => void;
 }) {
   return (
     <>
@@ -886,6 +891,7 @@ function GroupRows({
             isConnecting={isConnecting}
             depViolation={depViolations?.get(task.id)}
             baseline={baselines?.get(task.id)}
+            onReorder={onReorder}
           />
         ))}
     </>

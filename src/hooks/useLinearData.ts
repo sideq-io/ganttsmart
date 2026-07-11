@@ -17,6 +17,19 @@ import type { Filters, GroupBy, Milestone, Project, Task, WorkflowState } from '
 const DEFAULT_PRIORITIES = new Set([0, 1, 2, 3, 4]);
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 
+const customOrderKey = (projectId: string) => `linear_custom_order_${projectId}`;
+
+/** Read the persisted custom display order for a project (task uuids). Exported for ShareDialog. */
+export function loadCustomOrder(projectId: string): string[] {
+  if (!projectId) return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(customOrderKey(projectId)) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export function useLinearData(linearToken: string, onAuthError?: () => void) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(
@@ -52,8 +65,32 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
   const assignees = useMemo(() => [...new Set(tasks.map((t) => t.assignee))].sort(), [tasks]);
   const statuses = useMemo(() => [...new Set(tasks.map((t) => t.status))].sort(), [tasks]);
 
+  // Custom display order (uuids), persisted per project. Empty = default sort from the API.
+  const [customOrder, setCustomOrder] = useState<string[]>(() =>
+    loadCustomOrder(localStorage.getItem('linear_selected_project') || ''),
+  );
+
+  useEffect(() => {
+    setCustomOrder(loadCustomOrder(selectedProjectId));
+  }, [selectedProjectId]);
+
+  // Tasks in display order: saved positions first, unknown (new) tasks keep their
+  // default priority/due order after them. Sort is stable, so ties preserve fetch order.
+  const orderedTasks = useMemo(() => {
+    if (customOrder.length === 0) return tasks;
+    const pos = new Map(customOrder.map((uuid, i) => [uuid, i]));
+    return [...tasks].sort((a, b) => {
+      const ai = pos.get(a.uuid);
+      const bi = pos.get(b.uuid);
+      if (ai === undefined && bi === undefined) return 0;
+      if (ai === undefined) return 1;
+      if (bi === undefined) return -1;
+      return ai - bi;
+    });
+  }, [tasks, customOrder]);
+
   const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
+    return orderedTasks.filter((t) => {
       if (!filters.priorities.has(t.priorityVal)) return false;
       if (filters.assignee && t.assignee !== filters.assignee) return false;
       if (filters.status && t.status !== filters.status) return false;
@@ -63,7 +100,30 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
       }
       return true;
     });
-  }, [tasks, filters]);
+  }, [orderedTasks, filters]);
+
+  // Move a task next to another in the display order and persist it.
+  const reorderTask = useCallback(
+    (draggedUuid: string, targetUuid: string, placeAfter: boolean) => {
+      if (draggedUuid === targetUuid) return;
+      const order = orderedTasks.map((t) => t.uuid);
+      const from = order.indexOf(draggedUuid);
+      if (from === -1) return;
+      order.splice(from, 1);
+      const targetIdx = order.indexOf(targetUuid);
+      if (targetIdx === -1) return;
+      order.splice(placeAfter ? targetIdx + 1 : targetIdx, 0, draggedUuid);
+      setCustomOrder(order);
+      if (selectedProjectId) {
+        try {
+          localStorage.setItem(customOrderKey(selectedProjectId), JSON.stringify(order));
+        } catch {
+          // localStorage full/unavailable — order still applies for this session
+        }
+      }
+    },
+    [orderedTasks, selectedProjectId],
+  );
 
   // Push to undo stack and show toast with Undo action
   const pushUndo = useCallback((prevTasks: Task[], label: string) => {
@@ -481,6 +541,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
     cycleStatus,
     createRelation,
     removeRelation,
+    reorderTask,
     undo,
   };
 }

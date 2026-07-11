@@ -55,6 +55,7 @@ function GanttView({
     cycleStatus,
     createRelation,
     removeRelation,
+    reorderTask,
   } = useLinearData(linearToken, onDisconnectLinear);
 
   // Planning history: track baselines and log changes
@@ -180,6 +181,7 @@ function GanttView({
           onRescheduleStart={rescheduleStartWithHistory}
           onCycleStatus={cycleStatusWithHistory}
           onCreateRelation={createRelation}
+          onReorder={reorderTask}
           baselines={baselines}
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}
