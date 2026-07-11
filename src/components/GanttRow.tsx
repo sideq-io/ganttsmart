@@ -30,7 +30,10 @@ interface Props {
   depViolation?: string[]; // list of blocker IDs whose schedule is violated
   baseline?: TaskBaseline;
   isDone?: boolean;
+  onReorder?: (draggedUuid: string, targetUuid: string, placeAfter: boolean) => void;
 }
+
+const REORDER_MIME = 'application/x-gantt-task';
 
 export default function GanttRow({
   task,
@@ -47,6 +50,7 @@ export default function GanttRow({
   depViolation,
   baseline,
   isDone,
+  onReorder,
 }: Props) {
   const pCls = priorityClass(task.priorityVal);
   const dueDate = new Date(task.due + 'T00:00:00');
@@ -73,6 +77,11 @@ export default function GanttRow({
   const didDragRef = useRef(false);
 
   const isAnyDrag = isDragging || isDraggingStart || isMoving;
+
+  // Row reorder drag state (HTML5 DnD, initiated from the grip handle only)
+  const [rowDragEnabled, setRowDragEnabled] = useState(false);
+  const [isRowDragging, setIsRowDragging] = useState(false);
+  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
 
   // Bar position
   let barLeft: number;
@@ -347,13 +356,57 @@ export default function GanttRow({
     return { left: ghostLeft, width: ghostWidth };
   })();
 
+  // Reorder drop indicator: box-shadow won't render on <tr>, so paint it on the cells
+  const dropIndicatorCls =
+    dropPosition === 'above'
+      ? '[&>td]:shadow-[inset_0_2px_0_var(--color-accent)]'
+      : dropPosition === 'below'
+        ? '[&>td]:shadow-[inset_0_-2px_0_var(--color-accent)]'
+        : '';
+
   return (
     <tr
       data-task-id={task.id}
-      className="transition-colors duration-150 hover:bg-accent/[0.03] border-l-2 border-l-transparent hover:border-l-accent focus-within:bg-accent/[0.04] focus-within:border-l-accent"
+      data-task-uuid={task.uuid}
+      className={`group transition-colors duration-150 hover:bg-accent/[0.03] border-l-2 border-l-transparent hover:border-l-accent focus-within:bg-accent/[0.04] focus-within:border-l-accent ${isRowDragging ? 'opacity-40' : ''} ${dropIndicatorCls}`}
       tabIndex={0}
       role="row"
       aria-label={`${task.id}: ${task.title}, ${task.priority} priority, due ${formatDate(task.due)}, ${task.status}`}
+      draggable={rowDragEnabled}
+      onDragStart={(e) => {
+        if (!rowDragEnabled) {
+          e.preventDefault();
+          return;
+        }
+        e.dataTransfer.setData(REORDER_MIME, task.uuid);
+        e.dataTransfer.setData('text/plain', task.uuid);
+        e.dataTransfer.effectAllowed = 'move';
+        setIsRowDragging(true);
+      }}
+      onDragEnd={() => {
+        setIsRowDragging(false);
+        setRowDragEnabled(false);
+      }}
+      onDragOver={(e) => {
+        if (!onReorder || !e.dataTransfer.types.includes(REORDER_MIME)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = e.currentTarget.getBoundingClientRect();
+        setDropPosition(e.clientY < rect.top + rect.height / 2 ? 'above' : 'below');
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+        setDropPosition(null);
+      }}
+      onDrop={(e) => {
+        if (!onReorder || !e.dataTransfer.types.includes(REORDER_MIME)) return;
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const placeAfter = e.clientY >= rect.top + rect.height / 2;
+        setDropPosition(null);
+        const draggedUuid = e.dataTransfer.getData(REORDER_MIME);
+        if (draggedUuid && draggedUuid !== task.uuid) onReorder(draggedUuid, task.uuid, placeAfter);
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -362,6 +415,18 @@ export default function GanttRow({
         if (e.key === 's' && onCycleStatus) {
           e.preventDefault();
           onCycleStatus(task.uuid);
+        }
+        // Alt+Arrow: move row up/down in the custom order
+        if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && onReorder) {
+          e.preventDefault();
+          const row = e.currentTarget as HTMLElement;
+          const sibling = (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling) as HTMLElement | null;
+          const siblingUuid = sibling?.dataset.taskUuid;
+          if (siblingUuid) {
+            onReorder(task.uuid, siblingUuid, e.key === 'ArrowDown');
+            requestAnimationFrame(() => row.focus());
+          }
+          return;
         }
         // Arrow key navigation between rows
         if (e.key === 'ArrowDown') {
@@ -382,6 +447,24 @@ export default function GanttRow({
         style={{ width: colWidths.task, minWidth: 220, maxWidth: colWidths.task }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
+          {onReorder && (
+            <span
+              className={`shrink-0 -ml-2 text-text-muted opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity ${isRowDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onMouseDown={() => setRowDragEnabled(true)}
+              onMouseUp={() => setRowDragEnabled(false)}
+              title="Drag to reorder (Alt+↑/↓)"
+              aria-hidden="true"
+            >
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="3" cy="2.5" r="1.2" />
+                <circle cx="7" cy="2.5" r="1.2" />
+                <circle cx="3" cy="7" r="1.2" />
+                <circle cx="7" cy="7" r="1.2" />
+                <circle cx="3" cy="11.5" r="1.2" />
+                <circle cx="7" cy="11.5" r="1.2" />
+              </svg>
+            </span>
+          )}
           <Avatar name={task.assignee} size="sm" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -565,13 +648,14 @@ export default function GanttRow({
                 style={{ width: progressWidth }}
               />
             )}
-            {/* Label inside bar — status at rest, drag feedback when dragging */}
+            {/* Label inside bar — task title at rest, drag feedback when dragging */}
             {!barIsNarrow && (
               <span
-                className="relative z-[1] whitespace-nowrap tracking-[0.01em]"
+                className="relative z-[1] whitespace-nowrap tracking-[0.01em] overflow-hidden text-ellipsis max-w-full pr-2"
                 style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+                title={isAnyDrag ? undefined : task.title}
               >
-                {isAnyDrag ? barLabel : isDone ? '✓ Done' : task.status}
+                {isAnyDrag ? barLabel : isDone ? '✓ Done' : task.title}
               </span>
             )}
 

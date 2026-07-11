@@ -7,6 +7,9 @@ const LINEAR_API = "https://api.linear.app/graphql";
 const MAX_EXPIRY_DAYS = 90;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_PASSWORD_ATTEMPTS = 5;
+// Auto-refresh cached share data when older than this. Acts as a built-in throttle:
+// at most one Linear API call per share per window, regardless of viewer volume.
+const STALE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const PRIORITY_MAP: Record<number, string> = { 0: "None", 1: "Urgent", 2: "High", 3: "Medium", 4: "Low" };
 
 const corsHeaders = {
@@ -198,13 +201,22 @@ async function fetchLinearData(apiKey: string, projectId: string) {
     };
   }
 
-  const tasks = project.issues.nodes
-    .map((n: any) => {
-      const eff = effectiveDue(n);
-      return eff ? mapNode(n, eff.date, eff.isImplicit) : null;
-    })
-    .filter((t: any) => t !== null)
-    .sort((a: any, b: any) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime());
+  // Split active issues into scheduled (date or fallback) vs unscheduled (no date anywhere).
+  const tasks: any[] = [];
+  const unscheduledTasks: any[] = [];
+  for (const n of project.issues.nodes) {
+    const eff = effectiveDue(n);
+    if (eff) {
+      tasks.push(mapNode(n, eff.date, eff.isImplicit));
+    } else {
+      // Placeholder due so consumers that need `due` can render. Marked implicit.
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      unscheduledTasks.push(mapNode(n, todayStr, true));
+    }
+  }
+  tasks.sort((a, b) => a.priorityVal - b.priorityVal || new Date(a.due).getTime() - new Date(b.due).getTime());
+  unscheduledTasks.sort((a, b) => a.priorityVal - b.priorityVal || a.id.localeCompare(b.id));
 
   const doneTasks = (project.doneIssues?.nodes || [])
     .map((n: any) => {
@@ -218,7 +230,31 @@ async function fetchLinearData(apiKey: string, projectId: string) {
       return bTime - aTime;
     });
 
-  return { tasks, doneTasks, milestones: [], projectName: project.name };
+  return { tasks, doneTasks, unscheduledTasks, milestones: [], projectName: project.name };
+}
+
+// --- Custom display order (mirrors the sort in src/hooks/useLinearData.ts) ---
+
+function sanitizeCustomOrder(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string").slice(0, 1000);
+}
+
+// Re-sort scheduled tasks by the owner's saved order (task uuids). Tasks not in the
+// order (new issues) keep their default priority/due order after the ordered ones.
+// The order is embedded in cached_data so every refresh path can re-apply it.
+function withCustomOrder(data: any, customOrder: string[]) {
+  if (customOrder.length === 0) return data;
+  const pos = new Map(customOrder.map((uuid, i) => [uuid, i]));
+  const tasks = [...data.tasks].sort((a: any, b: any) => {
+    const ai = pos.get(a.uuid);
+    const bi = pos.get(b.uuid);
+    if (ai === undefined && bi === undefined) return 0;
+    if (ai === undefined) return 1;
+    if (bi === undefined) return -1;
+    return ai - bi;
+  });
+  return { ...data, tasks, customOrder };
 }
 
 async function getUser(req: Request) {
@@ -257,6 +293,7 @@ Deno.serve(async (req: Request) => {
       } catch (e) {
         return json({ error: "Failed to fetch Linear data: " + (e as Error).message }, 500);
       }
+      cachedData = withCustomOrder(cachedData, sanitizeCustomOrder(body.customOrder));
 
       const shareToken = crypto.randomUUID();
       const passwordHash = body.password ? await hashPasswordPBKDF2(body.password) : null;
@@ -302,7 +339,38 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      return json({ projectName: share.project_name, cachedData: share.cached_data, cachedAt: share.cached_at, expiresAt: share.expires_at });
+      // Auto-refresh: if the cache is older than STALE_TTL_MS, fetch fresh data from Linear
+      // using the owner's stored token. The token never leaves the server. On any failure
+      // (token revoked, Linear down, project deleted) we fall back to the existing cache so
+      // viewers never see a broken page.
+      let cachedData = share.cached_data;
+      let cachedAt = share.cached_at;
+      const ageMs = Date.now() - new Date(cachedAt).getTime();
+      if (ageMs > STALE_TTL_MS) {
+        try {
+          const { data: settings } = await supabase
+            .from("user_settings")
+            .select("linear_access_token")
+            .eq("id", share.owner_id)
+            .single();
+          if (settings?.linear_access_token) {
+            let fresh = await fetchLinearData(settings.linear_access_token, share.project_id);
+            fresh = withCustomOrder(fresh, sanitizeCustomOrder(share.cached_data?.customOrder));
+            const newCachedAt = new Date().toISOString();
+            await supabase
+              .from("shared_roadmaps")
+              .update({ cached_data: fresh, cached_at: newCachedAt })
+              .eq("id", share.id);
+            cachedData = fresh;
+            cachedAt = newCachedAt;
+          }
+        } catch (e) {
+          // Silently fall back to cached data — never break the viewer experience.
+          console.warn("share-roadmap auto-refresh failed for", share.id, (e as Error).message);
+        }
+      }
+
+      return json({ projectName: share.project_name, cachedData, cachedAt, expiresAt: share.expires_at });
     }
 
     if (action === "list") {
@@ -324,13 +392,19 @@ Deno.serve(async (req: Request) => {
       const { shareId } = body;
       if (!shareId) return json({ error: "shareId required" }, 400);
 
-      const { data: share } = await supabase.from("shared_roadmaps").select("project_id").eq("id", shareId).eq("owner_id", user.id).single();
+      const { data: share } = await supabase.from("shared_roadmaps").select("project_id, cached_data").eq("id", shareId).eq("owner_id", user.id).single();
       if (!share) return json({ error: "Share not found" }, 404);
 
       const { data: settings } = await supabase.from("user_settings").select("linear_access_token").eq("id", user.id).single();
       if (!settings?.linear_access_token) return json({ error: "No Linear token" }, 400);
 
-      const cachedData = await fetchLinearData(settings.linear_access_token, share.project_id);
+      // Owner may send an updated order; otherwise keep the one stored with the share.
+      const customOrder = body.customOrder !== undefined
+        ? sanitizeCustomOrder(body.customOrder)
+        : sanitizeCustomOrder(share.cached_data?.customOrder);
+
+      let cachedData = await fetchLinearData(settings.linear_access_token, share.project_id);
+      cachedData = withCustomOrder(cachedData, customOrder);
       await supabase.from("shared_roadmaps").update({ cached_data: cachedData, cached_at: new Date().toISOString() }).eq("id", shareId);
       return json({ success: true, cachedAt: new Date().toISOString() });
     }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { loadCustomOrder } from '@/hooks/useLinearData';
 import { supabase } from '@/lib/supabase';
 import { toast, toastError, toastSuccess } from './Toast';
 
@@ -58,6 +59,7 @@ export default function ShareDialog({ projectId, projectName, onClose }: Props) 
         projectId,
         password: password || undefined,
         expiresInDays: expiryDays,
+        customOrder: loadCustomOrder(projectId),
       });
 
       const url = `${window.location.origin}/share/${data.shareToken}`;
@@ -75,7 +77,7 @@ export default function ShareDialog({ projectId, projectName, onClose }: Props) 
   const handleRefresh = async (shareId: string) => {
     setRefreshingId(shareId);
     try {
-      await invokeShareFn('refresh', { shareId });
+      await invokeShareFn('refresh', { shareId, customOrder: loadCustomOrder(projectId) });
       toastSuccess('Share data refreshed');
       loadShares();
     } catch (e) {

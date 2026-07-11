@@ -28,6 +28,7 @@ export default function SharedView() {
     filteredTasks,
     tasks,
     doneTasks,
+    unscheduledTasks,
     milestones,
     projectName,
     cachedAt,
@@ -239,6 +240,7 @@ export default function SharedView() {
         <GanttChart
           tasks={filteredTasks}
           doneTasks={doneTasks}
+          unscheduledTasks={unscheduledTasks}
           milestones={milestones}
           loading={false}
           error=""
