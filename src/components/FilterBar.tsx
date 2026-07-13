@@ -18,6 +18,8 @@ interface Props {
   groupBy: GroupBy;
   onGroupByChange: (g: GroupBy) => void;
   hideProjectSelector?: boolean;
+  showBaselines?: boolean;
+  onShowBaselinesChange?: (show: boolean) => void;
 }
 
 const PRIORITY_CHIPS = [
@@ -87,6 +89,14 @@ function GroupIcon() {
   );
 }
 
+function BaselineIcon() {
+  return (
+    <svg width="14" height="10" viewBox="0 0 20 12" fill="none" className="shrink-0">
+      <rect x="1" y="1" width="18" height="10" rx="3" stroke="currentColor" strokeWidth="1.6" strokeDasharray="3 2.4" />
+    </svg>
+  );
+}
+
 function XIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -109,6 +119,8 @@ export default function FilterBar({
   groupBy,
   onGroupByChange,
   hideProjectSelector,
+  showBaselines,
+  onShowBaselinesChange,
 }: Props) {
   const togglePriority = (val: number) => {
     const next = new Set(filters.priorities);
@@ -250,6 +262,30 @@ export default function FilterBar({
           to={filters.dateTo}
           onChange={(dateFrom, dateTo) => onFiltersChange({ ...filters, dateFrom, dateTo })}
         />
+
+        {/* Plan vs Actual — toggles the dashed baseline ghost bars */}
+        {onShowBaselinesChange && (
+          <>
+            <div className="w-px h-5 bg-border-primary shrink-0" />
+            <button
+              onClick={() => onShowBaselinesChange(!showBaselines)}
+              aria-pressed={showBaselines}
+              title={
+                showBaselines
+                  ? 'Hide original plan overlay (dashed bars)'
+                  : 'Show original plan overlay (dashed bars)'
+              }
+              className={`h-7 px-2.5 rounded-full text-[11px] font-medium cursor-pointer transition-all border select-none active:scale-95 inline-flex items-center gap-1.5 shrink-0 ${
+                showBaselines
+                  ? 'border-amber-400/60 text-amber-500 bg-amber-400/10'
+                  : 'bg-bg-card border-border-primary text-text-muted hover:border-border-secondary hover:text-text-secondary'
+              }`}
+            >
+              <BaselineIcon />
+              Plan vs Actual
+            </button>
+          </>
+        )}
 
         <div className="flex-1" />
 
