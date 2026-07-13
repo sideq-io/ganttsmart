@@ -61,6 +61,13 @@ function GanttView({
   // Planning history: track baselines and log changes
   const { baselines, syncBaselines, logChange, logStatusTransition } = usePlanningHistory(selectedProjectId);
 
+  // Plan vs Actual overlay (dashed baseline ghost bars) — user preference, persisted
+  const [showBaselines, setShowBaselines] = useState(() => localStorage.getItem('gantt_show_baselines') !== '0');
+  const handleShowBaselinesChange = useCallback((show: boolean) => {
+    setShowBaselines(show);
+    localStorage.setItem('gantt_show_baselines', show ? '1' : '0');
+  }, []);
+
   // Sync baselines whenever tasks load
   useEffect(() => {
     if (tasks.length > 0) syncBaselines(tasks);
@@ -163,6 +170,8 @@ function GanttView({
         filteredCount={filteredTasks.length}
         groupBy={groupBy}
         onGroupByChange={setGroupBy}
+        showBaselines={showBaselines}
+        onShowBaselinesChange={handleShowBaselinesChange}
       />
 
       <StatsRow tasks={filteredTasks} />
@@ -182,7 +191,7 @@ function GanttView({
           onCycleStatus={cycleStatusWithHistory}
           onCreateRelation={createRelation}
           onReorder={reorderTask}
-          baselines={baselines}
+          baselines={showBaselines ? baselines : undefined}
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}
         />
