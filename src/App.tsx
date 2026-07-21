@@ -41,7 +41,9 @@ function GanttView({
     loading,
     error,
     lastSynced,
-    dayWidth,
+    effectiveDayWidth,
+    timeScale,
+    setTimeScale,
     groupBy,
     filters,
     setFilters,
@@ -151,7 +153,9 @@ function GanttView({
         onSignOut={onSignOut}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
-        dayWidth={dayWidth}
+        dayWidth={effectiveDayWidth}
+        timeScale={timeScale}
+        onTimeScaleChange={setTimeScale}
         theme={theme}
         onThemeChange={setTheme}
         projectId={selectedProjectId}
@@ -184,7 +188,8 @@ function GanttView({
           milestones={milestones}
           loading={loading}
           error={error}
-          dayWidth={dayWidth}
+          dayWidth={effectiveDayWidth}
+          timeScale={timeScale}
           groupBy={groupBy}
           onReschedule={rescheduleWithHistory}
           onRescheduleStart={rescheduleStartWithHistory}
