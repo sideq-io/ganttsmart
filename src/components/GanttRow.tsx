@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { Task } from '@/types';
+import type { Task, TimeScale } from '@/types';
 import type { TaskBaseline } from '@/hooks/usePlanningHistory';
 import type { ColumnWidths } from './GanttChart';
 import { Avatar } from '@/utils/avatar';
@@ -12,7 +12,7 @@ import {
   priorityClass,
   statusDotColors,
 } from '@/utils/colors';
-import { daysBetween, formatDate, isWeekend } from '@/utils/date';
+import { buildTimeCells, daysBetween, formatDate, isWeekend } from '@/utils/date';
 import { openDetailPanel } from './DetailPanel';
 
 interface Props {
@@ -21,6 +21,7 @@ interface Props {
   totalDays: number;
   today: Date;
   dayWidth: number;
+  timeScale?: TimeScale;
   colWidths: ColumnWidths;
   onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
@@ -41,6 +42,7 @@ export default function GanttRow({
   totalDays,
   today,
   dayWidth,
+  timeScale = 'day',
   colWidths,
   onReschedule,
   onRescheduleStart,
@@ -177,8 +179,9 @@ export default function GanttRow({
     barLabel = overdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d`;
   }
 
-  // When bar is too narrow for text, show label outside
-  const barIsNarrow = displayBarWidth < dayWidth * 1.8;
+  // When bar is too narrow for text, show label outside. The floor keeps labels
+  // outside compressed bars at week/month scale, where dayWidth is only a few px.
+  const barIsNarrow = displayBarWidth < Math.max(dayWidth * 1.8, 48);
 
   function formatDateStr(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -322,16 +325,16 @@ export default function GanttRow({
     [dayWidth, dueDate, taskStartDate, onReschedule, onRescheduleStart, task.uuid, chartStart, barLeft],
   );
 
-  // Background day cells
-  const bgDays: { isWeekend: boolean; isToday: boolean }[] = [];
-  for (let i = 0; i < totalDays; i++) {
-    const d = new Date(chartStart);
-    d.setDate(d.getDate() + i);
-    bgDays.push({
-      isWeekend: isWeekend(d),
-      isToday: d.getTime() === today.getTime(),
-    });
-  }
+  // Background grid cells (per day/week/month depending on time scale)
+  const bgCells = buildTimeCells(chartStart, totalDays, timeScale).map((c) => ({
+    days: c.days,
+    isWeekend: timeScale === 'day' && isWeekend(c.start),
+    isToday: timeScale === 'day' && c.start.getTime() === today.getTime(),
+  }));
+
+  // At week/month scale a whole cell spans many days, so mark today with a thin line instead
+  const todayOffset = daysBetween(chartStart, today);
+  const showTodayLine = timeScale !== 'day' && todayOffset >= 0 && todayOffset < totalDays;
 
   const progressWidth = task.totalChildren > 0 ? `${task.progress}%` : undefined;
   const statusDotColor = statusDotColors[task.statusType] || '#52525b';
@@ -584,14 +587,22 @@ export default function GanttRow({
         <div className="relative h-full flex items-center" style={{ width: totalDays * dayWidth }}>
           {/* Background grid */}
           <div className="absolute inset-0 flex">
-            {bgDays.map((d, i) => (
+            {bgCells.map((d, i) => (
               <div
                 key={i}
                 className={`shrink-0 h-full border-r ${d.isWeekend ? 'bg-bg-hover/30' : ''} ${d.isToday ? 'bg-accent/[0.08]' : ''} ${d.isToday ? 'border-dashed border-accent/40' : 'border-border-primary/30'}`}
-                style={{ width: dayWidth }}
+                style={{ width: d.days * dayWidth }}
               />
             ))}
           </div>
+
+          {/* Today marker at week/month scale (cells are too coarse to highlight) */}
+          {showTodayLine && (
+            <div
+              className="absolute top-0 bottom-0 w-px bg-accent/50 pointer-events-none z-[1]"
+              style={{ left: todayOffset * dayWidth + dayWidth / 2 }}
+            />
+          )}
 
           {/* Ghost bar — baseline (original plan) overlay, rendered above main bar */}
           {baselineBar && (

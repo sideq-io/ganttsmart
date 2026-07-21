@@ -54,6 +54,17 @@ export const DEFAULT_DAY_WIDTH = 28;
 export const MIN_DAY_WIDTH = 14;
 export const MAX_DAY_WIDTH = 56;
 
+export type TimeScale = 'day' | 'week' | 'month';
+
+export const TIME_SCALES: TimeScale[] = ['day', 'week', 'month'];
+
+/** Multiplier applied to dayWidth to get the effective px-per-day at each scale */
+export const TIME_SCALE_FACTORS: Record<TimeScale, number> = {
+  day: 1,
+  week: 0.25, // a week column spans 7 × dayWidth/4 ≈ 1.75 × dayWidth
+  month: 0.125, // a month column spans ~30 × dayWidth/8 ≈ 3.75 × dayWidth
+};
+
 export interface Filters {
   assignee: string;
   status: string;

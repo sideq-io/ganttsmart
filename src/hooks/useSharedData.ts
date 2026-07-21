@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH } from '@/types';
-import type { Filters, GroupBy, Milestone, Task } from '@/types';
+import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH, TIME_SCALE_FACTORS } from '@/types';
+import type { Filters, GroupBy, Milestone, Task, TimeScale } from '@/types';
 
 const DEFAULT_PRIORITIES = new Set([0, 1, 2, 3, 4]);
 
@@ -17,6 +17,7 @@ export function useSharedData(shareToken: string) {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [dayWidth, setDayWidth] = useState(DEFAULT_DAY_WIDTH);
+  const [timeScale, setTimeScale] = useState<TimeScale>('day');
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [filters, setFilters] = useState<Filters>({
     assignee: '',
@@ -104,6 +105,9 @@ export function useSharedData(shareToken: string) {
     setDayWidth((w) => Math.max(w - 7, MIN_DAY_WIDTH));
   }, []);
 
+  // Effective px-per-day: week/month views compress the axis
+  const effectiveDayWidth = dayWidth * TIME_SCALE_FACTORS[timeScale];
+
   useEffect(() => {
     if (shareToken) fetchSharedData();
   }, [shareToken, fetchSharedData]);
@@ -124,6 +128,9 @@ export function useSharedData(shareToken: string) {
     passwordError,
     submitPassword,
     dayWidth,
+    effectiveDayWidth,
+    timeScale,
+    setTimeScale,
     groupBy,
     filters,
     setFilters,

@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { Theme } from '@/hooks/useTheme';
-import type { Task } from '@/types';
+import { TIME_SCALES } from '@/types';
+import type { Task, TimeScale } from '@/types';
 import { exportAsPng, exportAsPdf } from '@/utils/export';
 import { toastError, toastSuccess } from './Toast';
 import ShareDialog from './ShareDialog';
@@ -15,6 +16,8 @@ interface Props {
   onZoomIn: () => void;
   onZoomOut: () => void;
   dayWidth: number;
+  timeScale: TimeScale;
+  onTimeScaleChange: (scale: TimeScale) => void;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
   projectId: string;
@@ -74,6 +77,8 @@ export default memo(function Header({
   onZoomIn,
   onZoomOut,
   dayWidth,
+  timeScale,
+  onTimeScaleChange,
   theme,
   onThemeChange,
   projectId,
@@ -183,6 +188,25 @@ export default memo(function Header({
           <span className="hidden md:inline">Sync</span>
         </button>
 
+        {/* Time scale: Day | Week | Month */}
+        <div className="flex items-center h-8 rounded-md bg-bg-hover/50 border border-border-primary p-0.5 gap-0.5">
+          {TIME_SCALES.map((s) => (
+            <button
+              key={s}
+              onClick={() => onTimeScaleChange(s)}
+              className={`px-2.5 h-[26px] rounded text-[11px] font-medium capitalize transition-colors cursor-pointer ${
+                timeScale === s
+                  ? 'bg-bg-card text-text-primary shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              title={`${s.charAt(0).toUpperCase() + s.slice(1)} view`}
+              aria-pressed={timeScale === s}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
         {/* Zoom controls */}
         <div className="flex items-center h-8 rounded-md bg-bg-hover/50 border border-border-primary">
           <button onClick={onZoomOut} className={iconBtn} title="Zoom out (−)" style={{ width: 28 }}>
@@ -190,7 +214,7 @@ export default memo(function Header({
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
-          <span className="text-[11px] text-text-muted w-7 text-center font-mono tabular-nums">{dayWidth}</span>
+          <span className="text-[11px] text-text-muted w-7 text-center font-mono tabular-nums">{Math.round(dayWidth)}</span>
           <button onClick={onZoomIn} className={iconBtn} title="Zoom in (+)" style={{ width: 28 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" />

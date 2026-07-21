@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {GroupBy, Milestone, Task} from '@/types';
+import type {GroupBy, Milestone, Task, TimeScale} from '@/types';
 import type {TaskBaseline} from '@/hooks/usePlanningHistory';
 import {Avatar} from '@/utils/avatar';
-import {daysBetween, isWeekend} from '@/utils/date';
+import {buildTimeCells, daysBetween, isWeekend, startOfWeek} from '@/utils/date';
 import DependencyArrows from './DependencyArrows';
 import GanttRow from './GanttRow';
 
@@ -14,6 +14,7 @@ interface Props {
   loading: boolean;
   error: string;
   dayWidth: number;
+  timeScale?: TimeScale;
   groupBy: GroupBy;
   onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
@@ -93,6 +94,7 @@ export default function GanttChart({
                                      loading,
                                      error,
                                      dayWidth,
+                                     timeScale = 'day',
                                      groupBy,
                                      onReschedule,
                                      onRescheduleStart,
@@ -315,46 +317,71 @@ export default function GanttChart({
       chartEnd.setDate(chartEnd.getDate() + 3);
     }
 
+    // Snap the range to whole week/month columns so the timeline never starts or ends mid-cell
+    if (timeScale === 'week') {
+      chartStart = startOfWeek(chartStart);
+    } else if (timeScale === 'month') {
+      chartStart = new Date(chartStart);
+      chartStart.setDate(1);
+    }
+
     const dataDays = daysBetween(chartStart, chartEnd);
 
     const fixedCols = colWidths.task + colWidths.priority + colWidths.due;
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth - 80 : 1200;
     const minDaysToFill = Math.ceil(Math.max(viewportWidth - fixedCols, 0) / dayWidth);
-    const totalDays = Math.max(dataDays, minDaysToFill);
+    let totalDays = Math.max(dataDays, minDaysToFill);
+
+    if (timeScale === 'week') {
+      totalDays = Math.ceil(totalDays / 7) * 7;
+    } else if (timeScale === 'month') {
+      const end = new Date(chartStart);
+      end.setDate(end.getDate() + totalDays);
+      if (end.getDate() !== 1) {
+        end.setDate(1);
+        end.setMonth(end.getMonth() + 1);
+      }
+      totalDays = daysBetween(chartStart, end);
+    }
 
     return {chartStart, totalDays};
-  }, [tasks, milestones, today, colWidths, dayWidth, dateFrom, dateTo]);
+  }, [tasks, milestones, today, colWidths, dayWidth, dateFrom, dateTo, timeScale]);
 
-  // Calendar header (memoized)
-  const {months, daysCells} = useMemo(() => {
-    const months: { label: string; days: number }[] = [];
-    const daysCells: { date: Date; isWeekend: boolean; isToday: boolean }[] = [];
+  // Calendar header (memoized): a top row of coarse groups (months, or years at month
+  // scale) and a bottom row of cells matching the current time scale.
+  const {topCells, bottomCells} = useMemo(() => {
+    const cells = buildTimeCells(chartStart, totalDays, timeScale);
 
-    let currentMonth = '';
-    let currentMonthCount = 0;
-
-    for (let i = 0; i < totalDays; i++) {
-      const d = new Date(chartStart);
-      d.setDate(d.getDate() + i);
-      const mk = d.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
-
-      if (mk !== currentMonth) {
-        if (currentMonth) months.push({label: currentMonth, days: currentMonthCount});
-        currentMonth = mk;
-        currentMonthCount = 0;
-      }
-      currentMonthCount++;
-
-      daysCells.push({
-        date: d,
-        isWeekend: isWeekend(d),
-        isToday: d.getTime() === today.getTime(),
-      });
+    const topCells: { label: string; days: number }[] = [];
+    for (const c of cells) {
+      const label =
+        timeScale === 'month'
+          ? String(c.start.getFullYear())
+          : c.start.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+      const last = topCells[topCells.length - 1];
+      if (last && last.label === label) last.days += c.days;
+      else topCells.push({label, days: c.days});
     }
-    if (currentMonth) months.push({label: currentMonth, days: currentMonthCount});
 
-    return {months, daysCells};
-  }, [chartStart, totalDays, today]);
+    const bottomCells = cells.map((c) => {
+      const end = new Date(c.start);
+      end.setDate(end.getDate() + c.days - 1);
+      return {
+        days: c.days,
+        isWeekend: timeScale === 'day' && isWeekend(c.start),
+        isCurrent: today >= c.start && today <= end,
+        label:
+          timeScale === 'day'
+            ? String(c.start.getDate())
+            : timeScale === 'week'
+              ? c.start.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
+              : c.start.toLocaleDateString('en-US', {month: 'short'}),
+        sub: timeScale === 'day' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][c.start.getDay()] : undefined,
+      };
+    });
+
+    return {topCells, bottomCells};
+  }, [chartStart, totalDays, today, timeScale]);
 
   // Milestone positions (memoized)
   const milestonesInRange = useMemo(
@@ -506,10 +533,10 @@ export default function GanttChart({
             </th>
             <th className="p-0 border-b-2 border-border-primary bg-bg-header sticky top-0 z-5">
               <div className="flex border-b border-border-primary">
-                {months.map((m, i) => (
+                {topCells.map((m, i) => (
                   <div
                     key={i}
-                    className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary py-2.5 text-center border-r border-border-primary"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary py-2.5 text-center border-r border-border-primary overflow-hidden whitespace-nowrap"
                     style={{width: m.days * dayWidth}}
                   >
                     {m.label}
@@ -517,26 +544,28 @@ export default function GanttChart({
                 ))}
               </div>
               <div className="flex relative">
-                {daysCells.map((d, i) => (
+                {bottomCells.map((d, i) => (
                   <div
                     key={i}
-                    className={`text-[10px] text-center py-1.5 shrink-0 border-r border-border-primary/60 ${
-                      d.isToday
+                    className={`text-[10px] text-center py-1.5 shrink-0 border-r border-border-primary/60 overflow-hidden whitespace-nowrap ${
+                      d.isCurrent
                         ? 'text-accent font-bold bg-accent/[0.08]'
                         : d.isWeekend
                           ? 'bg-bg-hover/40 text-text-muted'
                           : 'text-text-muted'
                     }`}
                     style={{
-                      width: dayWidth,
+                      width: d.days * dayWidth,
                     }}
                   >
-                    <div className="leading-none">{d.date.getDate()}</div>
-                    <div
-                      className={`text-[8px] leading-none mt-0.5 ${d.isToday ? 'text-accent' : 'text-text-muted/70'}`}
-                    >
-                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.date.getDay()]}
-                    </div>
+                    <div className="leading-none">{d.label}</div>
+                    {d.sub !== undefined && (
+                      <div
+                        className={`text-[8px] leading-none mt-0.5 ${d.isCurrent ? 'text-accent' : 'text-text-muted/70'}`}
+                      >
+                        {d.sub}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {milestonesInRange.map((m) => (
@@ -572,6 +601,7 @@ export default function GanttChart({
               totalDays={totalDays}
               today={today}
               dayWidth={dayWidth}
+              timeScale={timeScale}
               colWidths={colWidths}
               onReschedule={onReschedule}
               onRescheduleStart={onRescheduleStart}
@@ -655,6 +685,7 @@ export default function GanttChart({
                   totalDays={totalDays}
                   today={today}
                   dayWidth={dayWidth}
+                  timeScale={timeScale}
                   colWidths={colWidths}
                   isDone
                 />
@@ -815,6 +846,7 @@ function GroupRows({
                      totalDays,
                      today,
                      dayWidth,
+                     timeScale,
                      colWidths,
                      onReschedule,
                      onRescheduleStart,
@@ -834,6 +866,7 @@ function GroupRows({
   totalDays: number;
   today: Date;
   dayWidth: number;
+  timeScale: TimeScale;
   colWidths: ColumnWidths;
   onReschedule?: (taskUuid: string, newDueDate: string) => Promise<void>;
   onRescheduleStart?: (taskUuid: string, newStartDate: string) => Promise<void>;
@@ -883,6 +916,7 @@ function GroupRows({
             totalDays={totalDays}
             today={today}
             dayWidth={dayWidth}
+            timeScale={timeScale}
             colWidths={colWidths}
             onReschedule={onReschedule}
             onRescheduleStart={onRescheduleStart}
