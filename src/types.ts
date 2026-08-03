@@ -20,6 +20,8 @@ export interface Task {
   completedAt?: string;
   /** True when `due` was derived from project.targetDate (issue has no explicit due date) */
   isDueImplicit?: boolean;
+  /** Linear project milestone this issue belongs to, if any */
+  milestoneId?: string | null;
 }
 
 export interface Project {
@@ -31,6 +33,10 @@ export interface Milestone {
   id: string;
   name: string;
   targetDate: string | null;
+  description?: string;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WorkflowState {
