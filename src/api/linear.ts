@@ -176,7 +176,11 @@ export async function fetchIssues(
           nodes {
             id
             name
+            description
             targetDate
+            sortOrder
+            createdAt
+            updatedAt
           }
         }
         issues(first: 250, filter: { completedAt: { null: true } }) {
@@ -193,6 +197,7 @@ export async function fetchIssues(
             completedAt
             assignee { name }
             team { id }
+            projectMilestone { id }
           }
         }
         doneIssues: issues(first: 100, filter: { completedAt: { null: false } }) {
@@ -209,6 +214,7 @@ export async function fetchIssues(
             completedAt
             assignee { name }
             team { id }
+            projectMilestone { id }
           }
         }
       }
@@ -229,13 +235,24 @@ export async function fetchIssues(
     completedAt: string | null;
     assignee: { name: string } | null;
     team: { id: string } | null;
+    projectMilestone: { id: string } | null;
+  }
+
+  interface MilestoneNode {
+    id: string;
+    name: string;
+    description: string | null;
+    targetDate: string | null;
+    sortOrder: number | null;
+    createdAt: string | null;
+    updatedAt: string | null;
   }
 
   const project = data.project as {
     name: string;
     startDate: string | null;
     targetDate: string | null;
-    projectMilestones: { nodes: Array<{ id: string; name: string; targetDate: string | null }> };
+    projectMilestones: { nodes: MilestoneNode[] };
     issues: { nodes: IssueNode[] };
     doneIssues: { nodes: IssueNode[] };
   };
@@ -354,6 +371,7 @@ export async function fetchIssues(
       completedChildren: ch.completed,
       completedAt: n.completedAt || undefined,
       isDueImplicit: isDueImplicit || undefined,
+      milestoneId: n.projectMilestone?.id ?? null,
     };
   }
 
@@ -391,11 +409,23 @@ export async function fetchIssues(
       return bTime - aTime; // newest completed first
     });
 
-  const milestones: Milestone[] = (project.projectMilestones?.nodes || []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    targetDate: m.targetDate,
-  }));
+  const milestones: Milestone[] = (project.projectMilestones?.nodes || [])
+    .map((m) => ({
+      id: m.id,
+      name: m.name,
+      targetDate: m.targetDate,
+      description: m.description || undefined,
+      sortOrder: m.sortOrder ?? undefined,
+      createdAt: m.createdAt || undefined,
+      updatedAt: m.updatedAt || undefined,
+    }))
+    .sort((a, b) => {
+      // Chronological where possible; undated milestones last, then by sortOrder
+      if (a.targetDate && b.targetDate) return a.targetDate.localeCompare(b.targetDate);
+      if (a.targetDate) return -1;
+      if (b.targetDate) return 1;
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    });
 
   return { projectName: project.name, tasks, doneTasks, unscheduledTasks, milestones };
 }
@@ -447,6 +477,25 @@ export async function updateIssueStartDate(apiKey: string, issueId: string, star
       { id: issueId, description: newDesc },
     );
   });
+}
+
+/** Move a project milestone's target date. Debounced — driven by dragging on the chart. */
+export async function updateMilestoneTargetDate(
+  apiKey: string,
+  milestoneId: string,
+  targetDate: string,
+): Promise<void> {
+  await debouncedApiCall(`milestone-${milestoneId}`, () =>
+    gql(
+      apiKey,
+      `mutation($id: String!, $targetDate: TimelessDate!) {
+        projectMilestoneUpdate(id: $id, input: { targetDate: $targetDate }) {
+          success
+        }
+      }`,
+      { id: milestoneId, targetDate },
+    ),
+  );
 }
 
 export async function updateIssueState(apiKey: string, issueId: string, stateId: string): Promise<void> {

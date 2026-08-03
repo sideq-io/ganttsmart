@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import FilterBar from '@/components/FilterBar';
 import GanttChart from '@/components/GanttChart';
 import Legend from '@/components/Legend';
+import MilestonePanel from '@/components/MilestonePanel';
 import StatsRow from '@/components/StatsRow';
 import Tooltip from '@/components/Tooltip';
 import { useSharedData } from '@/hooks/useSharedData';
@@ -268,6 +269,7 @@ export default function SharedView() {
           timeScale={timeScale}
           groupBy={groupBy}
         />
+        <MilestonePanel />
         <Tooltip />
       </div>
 

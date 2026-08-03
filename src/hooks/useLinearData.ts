@@ -9,6 +9,7 @@ import {
   updateIssueDueDate,
   updateIssueStartDate,
   updateIssueState,
+  updateMilestoneTargetDate,
 } from '@/api/linear';
 import { toast, toastError, toastSuccess } from '@/components/Toast';
 import { DEFAULT_DAY_WIDTH, MAX_DAY_WIDTH, MIN_DAY_WIDTH, TIME_SCALE_FACTORS } from '@/types';
@@ -343,6 +344,44 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
     [linearToken, tasks, pushUndo],
   );
 
+  // Optimistic milestone move (drag on the chart) with rollback + undo
+  const updateMilestoneDate = useCallback(
+    async (milestoneId: string, newTargetDate: string) => {
+      if (!linearToken) return;
+
+      const prevMilestones = milestones;
+      const milestone = milestones.find((m) => m.id === milestoneId);
+      if (!milestone) return;
+
+      setMilestones((prev) =>
+        prev.map((m) => (m.id === milestoneId ? { ...m, targetDate: newTargetDate } : m)),
+      );
+
+      pendingMutations.current++;
+      try {
+        await updateMilestoneTargetDate(linearToken, milestoneId, newTargetDate);
+        toast(`${milestone.name} moved`, 'success', {
+          label: 'Undo',
+          onClick: () => {
+            setMilestones(prevMilestones);
+            if (milestone.targetDate) {
+              updateMilestoneTargetDate(linearToken, milestoneId, milestone.targetDate).catch(() => {});
+            }
+          },
+        });
+      } catch (e) {
+        if (e instanceof DebounceCancelled) return; // superseded by a newer drag
+        setMilestones(prevMilestones);
+        toastError(`Failed to move milestone: ${(e as Error).message}`, () =>
+          updateMilestoneDate(milestoneId, newTargetDate),
+        );
+      } finally {
+        pendingMutations.current--;
+      }
+    },
+    [linearToken, milestones],
+  );
+
   // Optimistic status cycle with rollback + undo
   const cycleStatus = useCallback(
     async (taskUuid: string) => {
@@ -557,6 +596,7 @@ export function useLinearData(linearToken: string, onAuthError?: () => void) {
     zoomOut,
     reschedule,
     rescheduleStart,
+    updateMilestoneDate,
     cycleStatus,
     createRelation,
     removeRelation,

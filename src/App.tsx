@@ -8,6 +8,7 @@ import Onboarding from '@/components/Onboarding';
 import StatsRow from '@/components/StatsRow';
 import ToastContainer from '@/components/Toast';
 import DetailPanel, { setRemoveRelationHandler, setBaselinesForPanel } from '@/components/DetailPanel';
+import MilestonePanel, { setMilestoneDateHandler } from '@/components/MilestonePanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useLinearData } from '@/hooks/useLinearData';
 import { usePlanningHistory } from '@/hooks/usePlanningHistory';
@@ -54,6 +55,7 @@ function GanttView({
     zoomOut,
     reschedule,
     rescheduleStart,
+    updateMilestoneDate,
     cycleStatus,
     createRelation,
     removeRelation,
@@ -110,6 +112,12 @@ function GanttView({
     setRemoveRelationHandler(removeRelation);
     return () => setRemoveRelationHandler(null);
   }, [removeRelation]);
+
+  // Register the date handler for MilestonePanel's date picker
+  useEffect(() => {
+    setMilestoneDateHandler(updateMilestoneDate);
+    return () => setMilestoneDateHandler(null);
+  }, [updateMilestoneDate]);
 
   // Keep DetailPanel's baselines in sync
   useEffect(() => {
@@ -196,6 +204,7 @@ function GanttView({
           onCycleStatus={cycleStatusWithHistory}
           onCreateRelation={createRelation}
           onReorder={reorderTask}
+          onUpdateMilestoneDate={updateMilestoneDate}
           baselines={showBaselines ? baselines : undefined}
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}
@@ -203,6 +212,7 @@ function GanttView({
       </div>
 
       <DetailPanel />
+      <MilestonePanel />
       <ToastContainer />
     </div>
   );
