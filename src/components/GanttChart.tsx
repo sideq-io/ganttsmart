@@ -634,7 +634,7 @@ export default function GanttChart({
     >
       <div ref={innerRef} className="relative" style={{minWidth: '100%'}}>
         <table className="border-collapse" style={{width: fixedColsWidth + totalDays * dayWidth}}>
-          <thead>
+          <thead ref={theadRef}>
           <tr>
             <th className={`${thBase} px-[18px]`} style={{width: colWidths.task, minWidth: MIN_WIDTHS.task}}>
               Task
