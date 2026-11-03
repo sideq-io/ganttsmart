@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AuthPage from '@/components/AuthPage';
+import KeycloakAuthPage from '@/components/KeycloakAuthPage';
 import FilterBar from '@/components/FilterBar';
 import GanttChart from '@/components/GanttChart';
 import Header from '@/components/Header';
@@ -219,7 +220,7 @@ function GanttView({
 }
 
 export default function App() {
-  const { user, loading, linearToken, signUp, signIn, signInWithGoogle, signOut, disconnectLinear } = useAuth();
+  const { user, loading, linearToken, signUp, signIn, signInWithGoogle, signInWithKeycloak, signOut, disconnectLinear } = useAuth();
 
   // Initialize theme on app load (applies class to <html> even on auth pages)
   useTheme();
@@ -233,6 +234,9 @@ export default function App() {
   }
 
   if (!user) {
+    if (import.meta.env.VITE_AUTH_MODE === 'keycloak') {
+      return <KeycloakAuthPage onSignIn={signInWithKeycloak} />;
+    }
     return <AuthPage onSignIn={signIn} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} />;
   }
 

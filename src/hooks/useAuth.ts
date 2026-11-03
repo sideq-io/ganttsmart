@@ -139,6 +139,14 @@ export function useAuth() {
     if (error) throw error;
   }, []);
 
+  const signInWithKeycloak = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'keycloak',
+      options: { scopes: 'openid', redirectTo: `${window.location.origin}/app` },
+    });
+    if (error) throw error;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     await supabase.auth.signOut();
@@ -174,6 +182,7 @@ export function useAuth() {
     signUp,
     signIn,
     signInWithGoogle,
+    signInWithKeycloak,
     signOut,
     saveLinearToken,
     disconnectLinear,

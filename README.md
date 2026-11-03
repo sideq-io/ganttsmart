@@ -63,7 +63,7 @@ Open [localhost:5173](http://localhost:5173). You'll need Supabase and Linear OA
 | Category | Technologies |
 |---|---|
 | **Frontend** | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
-| **Auth** | Supabase Auth (email/password + Google OAuth) |
+| **Auth** | Supabase Auth (email/password + Google OAuth, or optional Keycloak OAuth) |
 | **Linear** | OAuth 2.0 + GraphQL API |
 | **Backend** | Supabase Edge Functions (Deno), PostgreSQL with RLS |
 | **Export** | html-to-image, jsPDF |
@@ -107,6 +107,7 @@ ganttsmart/
 | `VITE_SUPABASE_ANON_KEY` | Supabase public/anon key |
 | `VITE_LINEAR_CLIENT_ID` | Linear OAuth app client ID |
 | `VITE_LINEAR_REDIRECT_URI` | OAuth callback (`http://localhost:5173/callback` for dev) |
+| `VITE_AUTH_MODE` | Optional. `standard` (default, including when unset) uses email/password and Google; `keycloak` shows only Keycloak login. Rebuild after changing it. |
 
 ### Edge Function Secrets (set in Supabase dashboard)
 
@@ -123,6 +124,16 @@ ganttsmart/
 3. Deploy Edge Functions from `supabase/functions/`
 4. Register a [Linear OAuth app](https://linear.app/settings/api/applications) with your redirect URI
 5. (Optional) Configure Google OAuth in Supabase dashboard
+
+### Optional Keycloak Login
+
+Leave `VITE_AUTH_MODE` unset or set it to `standard` to keep the original email/password, registration, and Google login flow. To use Keycloak instead:
+
+1. Configure [Keycloak OAuth in Supabase](https://supabase.com/docs/guides/auth/social-login/auth-keycloak) with your realm issuer, confidential client ID, and client secret.
+2. Allow `<SUPABASE_PUBLIC_URL>/auth/v1/callback` as the client's redirect URI in Keycloak, and `<APP_ORIGIN>/app` in Supabase's redirect allowlist.
+3. Set `VITE_AUTH_MODE=keycloak` in your build environment (for example, `.env.production`) and rebuild the frontend. Vite reads this setting at build time, so restarting the web server alone does not apply changes.
+
+In Keycloak mode, the login page offers only Keycloak. To enforce this policy at the API too, disable email/password and other unused providers in Supabase Auth. Allow OAuth user creation when users should be provisioned on their first Keycloak login. Keep the Keycloak client secret in Supabase Auth's server configuration; it does not belong in a `VITE_` variable.
 
 ---
 
